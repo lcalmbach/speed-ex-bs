@@ -1,0 +1,6 @@
+[server]
+enableCORS = false
+enableXsrfProtection = false
+
+[mapbox]
+token = "pk.eyJ1IjoiZ29kb3Q2MyIsImEiOiJja3VsYmlvYjkxa3ZrMzJteWFvcGJ4c2hhIn0.6fSS2nQEjIb8ypihACoMyQ"
