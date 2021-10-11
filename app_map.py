@@ -1,16 +1,17 @@
-from sqlite3.dbapi2 import Timestamp
-from numpy.random.mtrand import random_integers
+# from sqlite3.dbapi2 import Timestamp
+# from numpy.random.mtrand import random_integers
 import streamlit as st
 import altair as alt
 import pandas as pd
 import pydeck as pdk
 import numpy as np
-import random
+# import random
 from queries import qry
 
 import const as cn
 import database as db
 
+lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'anz', 'fahrzeuge']
 
 def plot_map(df: pd.DataFrame, settings: object):
     """
@@ -241,9 +242,8 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
         'get_fill_color':'[red, green, blue, 80]'}
 
         settings['direction'] = st.sidebar.selectbox("Richtung:", [1,2])
-        lst_fields = ['diff_v85_perc','uebertretungsquote', 'diff_v85_perc', 'anz', 'fahrzeuge']
-        settings['rad_field'] = st.sidebar.selectbox("Symbole mit Grösse proportional zu Feld:", lst_fields)
-        settings['color_field'] = st.sidebar.selectbox("Symbole mit Farbe bestimmt durch Feld:", lst_fields)
+        settings['rad_field'] = st.sidebar.selectbox("Symbole mit Grösse proportional zu Feld:", lst_group_fields)
+        settings['color_field'] = st.sidebar.selectbox("Symbole mit Farbe bestimmt durch Feld:", lst_group_fields)
         settings['max4green'] = 0
         settings['max4orange'] = 10
         return settings
@@ -327,8 +327,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         'tooltip_html':get_tooltip_html(), 
         }
 
-        lst_fields = ['diff_v85_perc','uebertretungsquote', 'diff_v85_perc', 'anz', 'fahrzeuge']
-        settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_fields)
+        settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_group_fields)
         return settings
 
     settings = init_settings()
@@ -398,8 +397,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         'tooltip_html':get_tooltip_html(), 
         }
 
-        lst_fields = ['diff_v85_perc','uebertretungsquote', 'diff_v85_perc', 'anz', 'fahrzeuge']
-        settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_fields)
+        settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_group_fields)
         settings['width'] = 400
         settings['height'] = 400
         

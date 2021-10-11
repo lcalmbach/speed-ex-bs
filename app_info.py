@@ -11,4 +11,7 @@ def show_menu(texts, conn):
 
     st.markdown("## Geschwindigkeitsübertretungen in Basel-Stadt")
     body = texts['intro'].format(min_timestamp, max_timestamp)
-    st.markdown(body)
+    parameters = texts['parameters'].format(min_timestamp, max_timestamp)
+    st.markdown(body,unsafe_allow_html=True)
+    with st.expander('Parameters'):
+        st.markdown(parameters,unsafe_allow_html=True)

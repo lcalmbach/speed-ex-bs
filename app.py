@@ -1,15 +1,15 @@
 import streamlit as st 
 from streamlit_lottie import st_lottie
 import app_info
-import app_karte
-import app_statistik
+import app_map
+import app_stats
 import requests
 import const as cn
 import json
 import sqlite3
 from queries import qry
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
 VERSION_DATE = '2021-10-11'
@@ -64,9 +64,9 @@ def main():
     if menu_action == 'Info':
         app_info.show_menu(texts['app_info'], conn)
     elif menu_action == 'Karte':
-        app_karte.show_menu(texts['app_map'], conn)
+        app_map.show_menu(texts['app_map'], conn)
     elif menu_action == 'Statistik':
-        app_statistik.show_menu()
+        app_stats.show_menu(texts['app_stats'], conn)
     st.sidebar.markdown(APP_INFO, unsafe_allow_html=True)
 
 if __name__ == '__main__':
