@@ -9,7 +9,7 @@ import json
 import sqlite3
 from queries import qry
 
-__version__ = '0.0.3'
+__version__ = '0.0.5'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
 VERSION_DATE = '2021-10-11'
