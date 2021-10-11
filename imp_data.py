@@ -31,16 +31,16 @@ def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
         return ok
 
 def read_velocities():
+    ok = True
     df = pd.read_csv("./import/100097.csv", sep=';')
     df = df.query('Geschwindigkeit > Zone')
     print(df.columns)
     lst_fields = ['Messung-ID', 'Richtung ID', 'Datum und Zeit', 'Geschwindigkeit']
     df = df[lst_fields]
-    df.columns = ['Messung-ID','Richtung-ID', 'Timestamp', 'Geschwindigkeit']
+    df.columns = ['messung_id','richtung_id', 'timestamp', 'geschwindigkeit']
     print(df.head())
-    df.to_parquet('violation.parquet')
-    #df.to_csv('violation.csv',sep = ";")
-    ok = save_db_table('violation',df, [])
+    df.to_parquet('violations.parquet')
+    # ok = save_db_table('violation',df, [])
     return ok
 
 def read_stations():
@@ -72,9 +72,9 @@ def read_stations():
     df_r2.set_index(['messung_id', 'richtung'])
 
     df = pd.concat([df_r1, df_r2], keys = ['messung_id', 'richtung']).reset_index()
-
-    ok = save_db_table('station',df,[])
+    df.to_parquet('stations.parquet')
+    # ok = save_db_table('station',df,[])
     return ok
 
-# print(read_velocities())
+print(read_velocities())
 print (read_stations())

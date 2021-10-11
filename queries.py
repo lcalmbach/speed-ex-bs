@@ -25,7 +25,7 @@ qry = {
             station
         where 
             latitude is not null
-            and messung_id < 10;
+            and messung_id < 100;
         """,
     "all_violations":"""select 
             t2.messung_id
@@ -49,7 +49,7 @@ qry = {
             violation t1 
             inner join station t2 on t2.messung_id = t1.messung_id and t2.richtung = t1.richtung
         where
-            t2.messung_id < 10
+            t2.messung_id < 100
         """
 }
 
