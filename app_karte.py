@@ -82,10 +82,10 @@ def plot_map(df: pd.DataFrame, settings: object):
 
 
 def show_uebersicht(conn):
-    
+
     @st.experimental_memo()   
-    def perepare_data(conn):    
-        df_stations, ok = db.execute_query(qry['all_stations'], conn)
+    def perepare_data(_conn):    
+        df_stations, ok = db.execute_query(qry['all_stations'], _conn)
         return df_stations, ok
     
     def get_tooltip_html():
