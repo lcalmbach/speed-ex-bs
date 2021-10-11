@@ -17,7 +17,7 @@ qry = {
             ,"zone"
             ,"richtung" 
             ,"richtung_strasse" 
-            ,coalesce("fahrzeuge",-999) "fahrzeuge"
+            ,fahrzeuge
             ,coalesce("v50",-999) "v50"
             ,coalesce("v85",-999) "v85"
             ,coalesce("uebertretungsquote",-999) "uebertretungsquote"
@@ -25,7 +25,8 @@ qry = {
             station
         where 
             latitude is not null
-            and messung_id < 200;
+            and fahrzeuge > 0
+            and messung_id < 100;
         """,
     "all_violations":"""select 
             t2.messung_id
@@ -49,7 +50,7 @@ qry = {
             violation t1 
             inner join station t2 on t2.messung_id = t1.messung_id and t2.richtung = t1.richtung
         where
-            t2.messung_id < 200
+            t2.messung_id < 100
         """
 }
 
