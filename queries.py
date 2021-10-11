@@ -49,7 +49,7 @@ qry = {
             violation t1 
             inner join station t2 on t2.messung_id = t1.messung_id and t2.richtung = t1.richtung
         where
-            messung_id < 10
+            t2.messung_id < 10
         """
 }
 
