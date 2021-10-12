@@ -9,7 +9,7 @@ import requests
 
 def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
     ok = False
-    connect_string = 'sqlite:///velocity_all.sqlite3'
+    connect_string = 'sqlite:///velocity.sqlite3'
     try:
         sql_engine = sql.create_engine(connect_string, pool_recycle=3600)
         db_connection = sql_engine.connect()
@@ -33,11 +33,14 @@ def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
 def read_velocities():
     ok = True
     df = pd.read_csv("./import/100097.csv", sep=';')
-    # df = df.query('Geschwindigkeit > Zone')
+    df = df.query('Geschwindigkeit > Zone')
     print(df.columns)
     lst_fields = ['Messung-ID', 'Richtung ID', 'Datum und Zeit', 'Geschwindigkeit']
     df = df[lst_fields]
     df.columns = ['messung_id','richtung_id', 'timestamp', 'geschwindigkeit']
+    df['timestamp'] = df['timestamp'].str[:11]
+    df['hour'] = df['timestamp'].str[9:11].astype(int)
+    pd.to_datetime(df['timestamp'], format=)
     print(df.head())
     df.to_parquet('violations.parquet')
     ok = save_db_table('violation',df, [])
@@ -61,12 +64,12 @@ def read_stations():
        'zone', 'richtung_strasse', 'fahrzeuge', 'V50', 'V85', 'uebertretungsquote',
        'latitude', 'longitude', 'richtung']
     
-    df_r1 = df[r1_fields].copy() 
+    df_r1 = df[r1_fields] 
     df_r1['richtung'] = 1
     df_r1.columns = db_fields
     df_r1.set_index(['messung_id', 'richtung'])
     
-    df_r2 = df[r2_fields].copy() 
+    df_r2 = df[r2_fields]
     df_r2['richtung'] = 2
     df_r2.columns = db_fields
     df_r2.set_index(['messung_id', 'richtung'])
