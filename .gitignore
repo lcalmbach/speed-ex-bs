@@ -1,4 +1,5 @@
 env
 import
+__pycache__
 *.parquet
 velocity_all.sqlite3
