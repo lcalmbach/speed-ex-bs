@@ -9,10 +9,10 @@ import json
 import sqlite3
 from queries import qry
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-11'
+VERSION_DATE = '2021-10-13'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets8.lottiefiles.com/private_files/lf30_zcwz0fha.json'
