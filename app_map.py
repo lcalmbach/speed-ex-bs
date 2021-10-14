@@ -82,11 +82,12 @@ def plot_map(df: pd.DataFrame, settings: object):
         return r
 
 
-def show_uebersicht(conn):
+def show_uebersicht(conn, texts):
 
     @st.experimental_memo()   
     def perepare_data(_conn):    
         df_stations, ok = db.execute_query(qry['all_stations'], _conn)
+        df_stations['jahr'] = df_stations['messbeginn'].str[:4].astype(int) 
         return df_stations, ok
     
     def get_tooltip_html():
@@ -95,21 +96,24 @@ def show_uebersicht(conn):
             <b>Länge:</b> {longitude}<br/>
             <b>Breite:</b> {latitude}<br/>
             <b>Adresse:</b> {strasse} {hausnummer}<br/>
-            <b>Richtung:</b> {richtung_strasse}<br/>
             <b>Messbeginn:</b> {messbeginn}<br/>
             <b>Messende:</b> {messende}<br/>
             <b>Zone:</b> {zone}<br/>  
-            <b>V50:</b> {v50}<br/>
-            <b>V85:</b> {v85}<br/>
-            <b>Übertretungsquote:</b>{uebertretungsquote}<br/>
         """
 
     df, ok = perepare_data(conn)
-    midpoint = (np.average(df['latitude']), np.average(df['longitude']))
+    min_year = df['jahr'].min()
+    max_year = df['jahr'].max()
+    all_expression = '<alle>'
+    lst_years = [all_expression] + list(range(min_year, max_year + 1))
+    year = st.sidebar.selectbox("Wähle ein Jahr", lst_years)
+    df_filtered = df.query('jahr == @year') if year != all_expression else df
+
+    midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
-    chart = plot_map(df, settings)
+    chart = plot_map(df_filtered, settings)
     st.pydeck_chart(chart)
-    
+    st.markdown(texts['instructions'].format(min_year, max_year))    
 
 def plot_barchart(df,settings):
     chart = alt.Chart(df).mark_bar().encode(
@@ -154,14 +158,17 @@ def show_timemachine(conn):
 Parameter *{settings['rad_field']}*. Ein grosser Radius bedeutet, dass der Parameter einen Wert von {settings['max_rad_val']: .1f} und mehr hat. 
 Die Farbwahl ist wie folgt definiert: 
 - <span style="color:green">grün</span>: Der Wert von *{settings['rad_field']}* ist tiefer als {settings['max4green']: .1f}
-- <span style="color:orange">orange</span>: Der Wert von {settings['rad_field']} liegt zwischen {settings['max4green']} und {settings['max4orange']: .1f}
-- <span style="color:red">rot</span>: Der Wert von {settings['rad_field']} ist höher als {settings['max4orange']: .1f}
+- <span style="color:orange">orange</span>: Der Wert von {settings['rad_field']} liegt zwischen {settings['max4green'] :.1f} und {settings['max4orange'] :.1f}
+- <span style="color:red">rot</span>: Der Wert von {settings['rad_field']} ist höher als {settings['max4orange'] :.1f}
 
 Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infoseite. Du kannst die Grenzen für die Bestimmung des Radius oder der Farben in der Seitenleiste selbst festlegen. 
 """
     
     def get_colors(df,settings):
         def calc_rgb_color(clr, value):
+            fld = settings['color_field']
+            settings['max4green'] = df[fld].mean() 
+            settings['max4orange'] = df[fld].mean() + 2 * df[fld].std()
             result = 0
             if (clr == 'red') & (value > settings['max4green']):
                 result = 255
@@ -244,8 +251,6 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
         settings['direction'] = st.sidebar.selectbox("Richtung:", [1,2])
         settings['rad_field'] = st.sidebar.selectbox("Symbole mit Grösse proportional zu Feld:", lst_group_fields)
         settings['color_field'] = st.sidebar.selectbox("Symbole mit Farbe bestimmt durch Feld:", lst_group_fields)
-        settings['max4green'] = 0
-        settings['max4orange'] = 10
         return settings
 
     settings = init_settings()
@@ -452,7 +457,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 def show_menu(texts, conn):    
     menu_item = st.sidebar.selectbox('Optionen', ['Übersicht', 'Zeitliche Analyse', 'Ranglisten', 'Messtation Analyse'])
     if menu_item == 'Übersicht':
-        show_uebersicht(conn)
+        show_uebersicht(conn, texts)
     elif menu_item ==  'Zeitliche Analyse':
         show_timemachine(conn)
     elif menu_item ==  'Ranglisten':

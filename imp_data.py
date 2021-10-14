@@ -2,14 +2,17 @@
 # for fast retrievel into pandas. in the app, this local data is read first, if it contains the data from yesterday, it is used as is, otherwise, 
 # new data is fetched from data.bs and added to the pq, which then is uptodate for the next user.
 
+from io import StringIO
 import pandas as pd
 import sqlalchemy as sql
 import requests 
+from datetime import datetime
+import timeit
 
 
-def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
+def save_db_table(table_name: str, df: pd.DataFrame, fields: list, if_exists: str):
     ok = False
-    connect_string = 'sqlite:///velocity.sqlite3'
+    connect_string = 'sqlite:///velocity_all.sqlite3'
     try:
         sql_engine = sql.create_engine(connect_string, pool_recycle=3600)
         db_connection = sql_engine.connect()
@@ -20,7 +23,7 @@ def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
     try:
         if len(fields) > 0:
             df = df[fields]
-        df.to_sql(table_name, db_connection, if_exists='replace', chunksize=20000, index=False)
+        df.to_sql(table_name, db_connection, if_exists=if_exists, chunksize=20000, index=False)
         ok = True
     except ValueError as vx:
         print(vx)
@@ -30,6 +33,22 @@ def save_db_table(table_name: str, df: pd.DataFrame, fields: list):
         db_connection.close()
         return ok
 
+def test():
+    url_template = "https://data.bs.ch/explore/dataset/100097/download/?format=csv&disjunctive.geschwindigkeit=true&disjunctive.zone=true&disjunctive.ort=true&disjunctive.v50=true&disjunctive.v85=true&disjunctive.strasse=true&disjunctive.fzg=true&refine.timestamp={}%2F{}&timezone=Europe/Zurich&lang=de&use_labels_for_header=true&csv_separator=%3B"
+    if_exists = 'replace'
+    for year in range(2017,2022):
+        for month in range(1,3):
+            m = "{:02d}".format(month)
+            url = url_template.format(year,m)
+            req = requests.get(url)
+            data = StringIO(req.text)
+            df = pd.read_csv(data, sep=";")
+            table = 'violations' #f"t{year}_{m}"
+            ok = save_db_table(table,df,[],if_exists)
+            print(len(df), year, month, datetime.today())
+            if_exists = 'append'
+
+            
 def read_velocities():
     ok = True
     df = pd.read_csv("./import/100097.csv", sep=';')
@@ -40,7 +59,7 @@ def read_velocities():
     df.columns = ['messung_id','richtung_id', 'timestamp', 'geschwindigkeit']
     df['timestamp'] = df['timestamp'].str[:11]
     df['hour'] = df['timestamp'].str[9:11].astype(int)
-    pd.to_datetime(df['timestamp'], format=)
+    #pd.to_datetime(df['timestamp'], format=)
     print(df.head())
     df.to_parquet('violations.parquet')
     ok = save_db_table('violation',df, [])
@@ -79,5 +98,6 @@ def read_stations():
     ok = save_db_table('station',df,[])
     return ok
 
-print(read_velocities())
-print (read_stations())
+timeit.timeit(test)
+# print(read_velocities())
+# print (read_stations())
