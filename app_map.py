@@ -68,6 +68,7 @@ def plot_map(df: pd.DataFrame, settings: object):
         view_state = pdk.ViewState(
             longitude=settings['midpoint'][1], latitude=settings['midpoint'][0], zoom=12, min_zoom=5, max_zoom=20, pitch=0, bearing=-27.36
         )
+        
         r = pdk.Deck(
             map_style=cn.MAPBOX_STYLE,
             layers=[layer],
@@ -85,35 +86,45 @@ def plot_map(df: pd.DataFrame, settings: object):
 def show_uebersicht(conn, texts):
 
     @st.experimental_memo()   
-    def perepare_data(_conn):    
-        df_stations, ok = db.execute_query(qry['all_stations'], _conn)
-        df_stations['jahr'] = df_stations['messbeginn'].str[:4].astype(int) 
+    def prepare_data(_conn):    
+        df_stations, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
+        df_stations['start_date'] = pd.to_datetime(df_stations['start_date'])
+        df_stations['end_date'] = pd.to_datetime(df_stations['start_date'])
         return df_stations, ok
     
     def get_tooltip_html():
-        return """
+
+        text = """
             <b>Messung-id:</b> {messung_id}<br/>
             <b>Länge:</b> {longitude}<br/>
             <b>Breite:</b> {latitude}<br/>
-            <b>Adresse:</b> {strasse} {hausnummer}<br/>
-            <b>Messbeginn:</b> {messbeginn}<br/>
-            <b>Messende:</b> {messende}<br/>
+            <b>Adresse:</b> {address}<br/>
+            <b>Messbeginn:</b> {start_date}<br/>
+            <b>Messende:</b> {end_date}<br/>
             <b>Zone:</b> {zone}<br/>  
         """
+        return text
 
-    df, ok = perepare_data(conn)
-    min_year = df['jahr'].min()
-    max_year = df['jahr'].max()
+    df, ok = prepare_data(conn)
+    min_year = int(df['jahr'].min())
+    max_year = int(df['jahr'].max())
     all_expression = '<alle>'
     lst_years = [all_expression] + list(range(min_year, max_year + 1))
+    lst_zones = [all_expression] + list(df['zone'].unique())
+    zone = st.sidebar.selectbox("Wähle eine Zone", lst_zones)
     year = st.sidebar.selectbox("Wähle ein Jahr", lst_years)
     df_filtered = df.query('jahr == @year') if year != all_expression else df
-
+    df_filtered = df.query('zone == @zone') if zone != all_expression else df_filtered
+    df_filtered = df_filtered[['longitude','latitude','messung_id', 'address','zone','start_date','end_date']]
+    
+    df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime('%d.%m.%Y'))
+    df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime('%d.%m.%Y'))
     midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
-    chart = plot_map(df_filtered, settings)
+    chart = plot_map(df_filtered.iloc[3:], settings)
     st.pydeck_chart(chart)
     st.markdown(texts['instructions'].format(min_year, max_year))    
+
 
 def plot_barchart(df,settings):
     chart = alt.Chart(df).mark_bar().encode(
@@ -125,6 +136,7 @@ def plot_barchart(df,settings):
         height=settings['height'],
     )
     return chart
+
 
 def plot_linechart(df,settings):
     chart = alt.Chart(df).mark_line().encode(
@@ -143,12 +155,12 @@ def get_station_list(df:pd.DataFrame)->list:
     the stations must be ranked again, since the original dataframe is aggregated by direction, so each station
     can appear twice with a different ranking. therefore the df has to be aggregated without direction, then ranked again.
     """
-    groupby_fields_fields = ['messung_id', 'strasse','hausnummer','ort']
+    groupby_fields_fields = ['messung_id', 'address','ort']
     df = df.groupby(groupby_fields_fields)['uebertretungsquote'].agg(['mean']).reset_index()
     df['rang'] = df['mean'].rank(method='min').astype('int')
     df = df.sort_values('rang', ascending=False)
     ids = list(df['messung_id'])
-    vals = list(df['rang'].astype('string') + ') ' + df['strasse'] + ' ' + df['hausnummer'] + ' ' + df['ort']) 
+    vals = list(df['rang'].astype('string') + ') ' + df['address'] + ' ' + df['ort']) 
     return dict(zip(ids, vals))
 
 
@@ -189,7 +201,7 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
             <b>Messung-id:</b> {messung_id}<br/>
             <b>Länge:</b> {longitude}<br/>
             <b>Breite:</b> {latitude}<br/>
-            <b>Adresse:</b> {strasse} {hausnummer}<br/>
+            <b>Adresse:</b> {address}<br/>
             <b>Richtung:</b> {richtung_strasse}<br/>
             <b>Messbeginn:</b> {messbeginn}<br/>
             <b>Messende:</b> {messende}<br/>
@@ -313,10 +325,10 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             <b>Messung-id:</b> {messung_id}<br/>
             <b>Länge:</b> {longitude}<br/>
             <b>Breite:</b> {latitude}<br/>
-            <b>Adresse:</b> {strasse} {hausnummer}<br/>
+            <b>Adresse:</b> {address}<br/>
             <b>Richtung:</b> {richtung_strasse}<br/>
-            <b>Messbeginn:</b> {messbeginn}<br/>
-            <b>Messende:</b> {messende}<br/>
+            <b>Messbeginn:</b> {start_date}<br/>
+            <b>Messende:</b> {end_date}<br/>
             <b>Übertretungsquote:</b> {uebertretungsquote}<br/>
             <b>Zone:</b> {zone}<br/>  
             <b>V50:</b> {v50}<br/>
@@ -359,36 +371,35 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         else:
             return ''
 
-    @st.experimental_memo()   
+    @st.experimental_memo(suppress_st_warning=True)   
     def prepare_map_data(_conn):
         def add_calculated_fields(df):
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format="%d.%m.%y %H")
+            df['date_time'] = pd.to_datetime(df['date_time'], format="%d.%m.%y %H")
             df['latitude']=df['latitude'].astype('float')
             df['longitude']=df['longitude'].astype('float')
             
-            groupby_fields_fields = ['messung_id', 'ort', 'strasse', 'hausnummer', 'richtung','richtung_strasse','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','messbeginn','messende']
-            df = df.groupby(groupby_fields_fields)['geschwindigkeit'].agg(['max','count']).reset_index()
+            groupby_fields_fields = ['messung_id', 'ort', 'address', 'richtung','richtung_strasse','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
+            df = df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
             df = df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
             df['diff_v50_perc'] = df['diff_v50'] / 100
             df['diff_v85_perc'] = df['diff_v85'] / df['zone'] * 100
-
             return df
 
         def group_by_hour(_df):
             """
             aggregates all violations to hourly values used to drawthe time series 
             """
-            _df['hour'] = _df['timestamp'].dt.hour  
-            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','timestamp','hour','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','messbeginn','messende']
-            _df = _df.groupby(groupby_fields_fields)['geschwindigkeit'].agg(['max','count']).reset_index()
+            _df['hour'] = _df['date_time'].dt.hour  
+            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','date_time','hour','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
+            _df = _df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
             _df = _df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz', 'timestamp':'zeit'})
             return _df
 
-        df_all_violations, ok = db.execute_query(qry['all_violations'], _conn)   
+        df_all_violations, ok, err_msg = db.execute_query(qry['all_violations'], _conn)   
+        st.write(df_all_violations.head())
         # take only hours so all values will be aggregates by the hour, seems to be the easiest to achieve the y-m-d H time format 
-        df_all_violations['timestamp'] = df_all_violations['timestamp'].str[:11] 
         df_grouped_by_stations = add_calculated_fields(df_all_violations)   
         df_all_violations = group_by_hour(df_all_violations)
         
@@ -430,7 +441,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
     def get_station_title():
         x = df_filtered.iloc[0].to_dict()
-        return f"### Messtation {x['messung_id']} {x['strasse']} {x['hausnummer']}, von: {x['messbeginn']} bis: {x['messende']}"
+        return f"### Messtation {x['messung_id']} {x['address']}, von: {x['start_date']} bis: {x['end_date']}"
     
     settings = init_settings()
     df, df_all_violations, ok = prepare_map_data(conn)
@@ -443,6 +454,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     
     df_filtered = df.query(f"messung_id == @station")
     st.markdown(get_station_title())
+    st.write(df_filtered.head())
     if len(df_filtered) > 0:
         chart = plot_map(df_filtered, settings)
         st.pydeck_chart(chart)

@@ -8,6 +8,7 @@ import const as cn
 import json
 import sqlite3
 from queries import qry
+import database as db
 
 __version__ = '0.0.8'
 __author__ = 'Lukas Calmbach'
@@ -58,7 +59,7 @@ def main():
             st_lottie(lottie_search_names, height=80, loop=False)
 
     texts = get_texts()
-    conn = get_connection()
+    conn = db.get_pg_connection()
     st.sidebar.markdown(f"## {my_name}")
     menu_action = st.sidebar.selectbox('Menu',['Info','Karte','Statistik'])
     if menu_action == 'Info':

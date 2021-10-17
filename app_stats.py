@@ -10,18 +10,26 @@ f_dec = '.1f'
 f_pct = '.1%'
 f_dat = '%d.%m.%Y'
 
-@st.experimental_memo()     
+def convert_to_local_time(fld):
+    fld = pd.to_datetime(fld, utc=True)
+    fld = fld.index.tz_convert("Europe/Paris")
+    return fld
+
+# @st.experimental_memo()     
 def get_violations(_conn):
-    df, ok = db.execute_query(qry['all_violations'], _conn)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format="%d.%m.%y %H:%M:%S")
+    df, ok, err_msg = db.execute_query(qry['all_violations'], _conn)
+    print(df.dtypes)
+    df['date_time'] = convert_to_local_time(df['date_time'])
     return df
 
 # @st.experimental_memo()     
 def get_stations(_conn):
-    df, ok = db.execute_query(qry['all_stations'], _conn)
-    df['messbeginn'] = pd.to_datetime(df['messbeginn'])
-    df['messende'] = pd.to_datetime(df['messende'])
-    df[['strasse','hausnummer']] = df[['strasse','hausnummer']].fillna ('').astype(str)
+    df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
+    df['start_date'] = convert_to_local_time(df['date_time'])
+    df['end_date'] = convert_to_local_time(df['end_date'])
+    df['address'] = df['address'].astype(str)
+    df['richtung_strasse'] = df['richtung_strasse'].astype(str)
+
     return df
 
 def get_lst_ort(stations):
@@ -103,19 +111,18 @@ def dummy():
 
 def show_menu(texts, conn):    
 
-    dic_menu = {'1': 'Allgemeine Kennzahlen', '2': 'Statistik nach Messstation', '3': 'Statistik nach Wochentag', '4': 'Statistik nach Tageszeit'}
+    menu = ['Allgemeine Kennzahlen', 'Statistik nach Messstation', 'Statistik nach Wochentag', 'Statistik nach Tageszeit']
     
-    menu_item = st.sidebar.selectbox('Optionen', list(dic_menu.keys()),
-        format_func=lambda x: dic_menu[x])   
-    st.markdown(f"### {dic_menu[menu_item]}")
-    if menu_item == '1':
+    menu_item = st.sidebar.selectbox('Optionen', menu), 
+    st.markdown(f"### {menu[menu_item]}")
+    if menu_item == menu[0]:
         df = summary_all(conn)
         st.write(df)
-    elif menu_item ==  '2':
+    elif menu_item ==  menu[0]:
         station_stats(conn)
-    elif menu_item ==  '3':
+    elif menu_item ==  menu[0]:
         dummy()
-    elif menu_item ==  '4':
+    elif menu_item ==  menu[0]:
         dummy()
     
                 

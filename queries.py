@@ -1,43 +1,42 @@
 qry = {
-    "min_max_timestamp": """select min(timestamp) as min_timestamp, max(timestamp) as max_timestamp from violation order by timestamp desc;
+    "min_max_timestamp": """select min(start_date) as min_timestamp, max(end_date) as max_timestamp from station;
         """,
     "year_violations": """select substr(timestamp,1,4) as jahr, count(*) as anz from violation where timestamp is not null group by substr(timestamp,1,4);
         """,
     "year_stations": """select substr(messbeginn,1,4) as jahr, count(*) as anz from station where messbeginn is not null group by substr(messbeginn,1,4);
         """,
-    "all_stations": """select
-            "latitude"
-            ,"longitude"
-            ,"messung_id" 
-            ,"messbeginn" 
-            ,"messende" 
-            ,coalesce("strasse",'') strasse
-            ,coalesce("hausnummer",'') hausnummer
-            ,"ort" 
-            ,"zone"
-            ,"richtung" 
-            ,"richtung_strasse" 
+    "all_stations": """
+        select
+            messung_id
+            ,address
+            ,ort
+            ,start_date
+            ,end_date
+            ,zone
+            ,richtung_strasse
+            ,richtung
             ,fahrzeuge
-            ,coalesce("v50",-999) "v50"
-            ,coalesce("v85",-999) "v85"
-            ,coalesce("uebertretungsquote",-999) "uebertretungsquote"
+            ,uebertretungsquote
+            ,"v50"
+            ,"v85"
+            ,latitude
+            ,longitude
+            ,EXTRACT(year from start_date) AS jahr
         from 
             station
         where 
             latitude is not null
-            and fahrzeuge > 0
-            and messung_id < 100;
-        """,
+            and fahrzeuge > 0;
+            """,
     "all_violations":"""select 
             t2.messung_id
-            ,t2.messbeginn
-            ,t2.messende
+            ,t2.start_date
+            ,t2.end_date
             ,t2.latitude
             ,t2.longitude
-            ,t1.timestamp
-            ,t1.geschwindigkeit
-            ,coalesce(t2.strasse,'') strasse
-            ,coalesce(t2.hausnummer,'') hausnummer
+            ,t1.date_time
+            ,t1.velocity_kmph
+            ,t2.address
             ,t2.ort 
             ,t2.zone 
             ,t2.richtung
@@ -47,10 +46,8 @@ qry = {
             ,t2.fahrzeuge
             ,t2.uebertretungsquote
         from 
-            violation t1 
-            inner join station t2 on t2.messung_id = t1.messung_id and t2.richtung = t1.richtung
-        where
-            t2.messung_id < 100
+            velocity t1 
+            inner join station t2 on t2.id = t1.station_id
         """
 }
 

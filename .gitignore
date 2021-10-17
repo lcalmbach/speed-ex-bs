@@ -2,4 +2,5 @@ env
 import
 __pycache__
 *.parquet
-velocity_all.sqlite3
+*.sqlite3
+*.sqbpro
