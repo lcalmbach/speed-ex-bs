@@ -340,13 +340,19 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         """
 
     def init_settings():
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """        """"""
         settings = {'layer_type':'IconLayer', 
         'tooltip_html':get_tooltip_html(), 
         }
 
         settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_group_fields)
         return settings
-
+    
+    # start
     settings = init_settings()
     df, ok = prepare_map_data(conn, settings)
     df['rang'] = df[settings['rank_param']].rank(method='min').astype('int')
