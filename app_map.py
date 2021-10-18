@@ -10,6 +10,7 @@ from queries import qry
 
 import const as cn
 import database as db
+import helper
 
 lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'anz', 'fahrzeuge']
 
@@ -92,16 +93,16 @@ def show_uebersicht(conn, texts):
         df_stations['end_date'] = pd.to_datetime(df_stations['start_date'])
         return df_stations, ok
     
-    def get_tooltip_html():
+    def get_tooltip_html()->str:
 
         text = """
-            <b>Messung-id:</b> {messung_id}<br/>
-            <b>Länge:</b> {longitude}<br/>
-            <b>Breite:</b> {latitude}<br/>
+            <b>Messung-id:</b> {messung_id}<br/>           
             <b>Adresse:</b> {address}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
             <b>Messende:</b> {end_date}<br/>
             <b>Zone:</b> {zone}<br/>  
+            <b>Länge:</b> {longitude}<br/>
+            <b>Breite:</b> {latitude}<br/>
         """
         return text
 
@@ -203,8 +204,8 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
             <b>Breite:</b> {latitude}<br/>
             <b>Adresse:</b> {address}<br/>
             <b>Richtung:</b> {richtung_strasse}<br/>
-            <b>Messbeginn:</b> {messbeginn}<br/>
-            <b>Messende:</b> {messende}<br/>
+            <b>Messbeginn:</b> {start_date}<br/>
+            <b>Messende:</b> {end_date}<br/>
             <b>Übertretungsquote:</b> {uebertretungsquote}<br/>
             <b>Zone:</b> {zone}<br/>  
             <b>V50:</b> {v50}<br/>
@@ -226,14 +227,14 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
     @st.experimental_memo()          
     def prepare_map_data(_conn, settings):
         def add_calculated_fields(df):
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format="%d.%m.%y %H:%M:%S")
+            df['date_time'] = pd.to_datetime(df['date_time'], format="%d.%m.%y %H:%M:%S")
             df['latitude']=df['latitude'].astype('float')
             df['longitude']=df['longitude'].astype('float')
-            df['woche'] = df['timestamp'].dt.isocalendar().week
-            df['jahr'] = df['timestamp'].dt.year      
+            df['woche'] = df['date_time'].dt.isocalendar().week
+            df['jahr'] = df['date_time'].dt.year      
             groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','jahr','woche','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','messbeginn','messende']
-            df = df.groupby(groupby_fields_fields)['geschwindigkeit'].agg(['max','count']).reset_index()
-            df = df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz'})
+            df = df.groupby(groupby_fields_fields)['velocity'].agg(['max','count']).reset_index()
+            df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
             df['diff_v50_perc'] = df['diff_v50'] / 100
@@ -303,12 +304,20 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     @st.experimental_memo()   
     def prepare_map_data(_conn, settings):
         def add_calculated_fields(df):
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format="%d.%m.%y %H:%M:%S")
-            df['latitude']=df['latitude'].astype('float')
-            df['longitude']=df['longitude'].astype('float')
-            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','messbeginn','messende']
-            df = df.groupby(groupby_fields_fields)['geschwindigkeit'].agg(['max','count']).reset_index()
-            df = df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz'})
+            """[summary]
+
+            Args:
+                df ([type]): [description]
+
+            Returns:
+                [type]: [description]
+            """   
+            
+            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','address','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
+            df = df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
+            df = helper.set_column_types(df)
+            df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
+            df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
             df['diff_v50_perc'] = df['diff_v50'] / 100
@@ -316,15 +325,14 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
             return df
 
-        df, ok = db.execute_query(qry['all_violations'], _conn)     
+        df, ok, err_msg = db.execute_query(qry['all_violations'], _conn)     
         df = add_calculated_fields(df)   
         return df, ok        
 
     def get_tooltip_html():
         return """
             <b>Messung-id:</b> {messung_id}<br/>
-            <b>Länge:</b> {longitude}<br/>
-            <b>Breite:</b> {latitude}<br/>
+            
             <b>Adresse:</b> {address}<br/>
             <b>Richtung:</b> {richtung_strasse}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
@@ -337,6 +345,8 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             <b>V85 - Zone:</b> {diff_v85}<br/>
             <b>V50 - Zone%:</b> {diff_v50_perc}<br/>
             <b>V85 - Zone%:</b> {diff_v85_perc}<br/>
+            <b>Länge:</b> {longitude}<br/>
+            <b>Breite:</b> {latitude}<br/>
         """
 
     def init_settings():
@@ -386,7 +396,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             
             groupby_fields_fields = ['messung_id', 'ort', 'address', 'richtung','richtung_strasse','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
             df = df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
-            df = df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz'})
+            df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
             df['diff_v50_perc'] = df['diff_v50'] / 100
@@ -400,7 +410,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             _df['hour'] = _df['date_time'].dt.hour  
             groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','date_time','hour','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
             _df = _df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
-            _df = _df.rename(columns = {'max': 'max_geschwindigkeit', 'count':'anz', 'timestamp':'zeit'})
+            _df = _df.rename(columns = {'max': 'max_velocity', 'count':'anz', 'date_time':'zeit'})
             return _df
 
         df_all_violations, ok, err_msg = db.execute_query(qry['all_violations'], _conn)   

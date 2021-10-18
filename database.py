@@ -1,10 +1,8 @@
 import pandas as pd
-import sqlalchemy as sql
-import sqlite3
-import db_config as dbcn
 from sqlalchemy import create_engine   
-import streamlit as st
 import psycopg2
+
+import const as cn
 conn = ''
 
 
@@ -12,10 +10,10 @@ def get_pg_connection():
     """Reads the connection string and sets the sql_engine attribute."""
 
     conn = psycopg2.connect(
-        host = dbcn.DB_HOST,
-        database=dbcn.DB_DATABASE,
-        user=dbcn.DB_USER,
-        password=dbcn.DB_PASS)
+        host = cn.DB_HOST,
+        database=cn.DB_DATABASE,
+        user=cn.DB_USER,
+        password=cn.DB_PASS)
 
     return conn
 
@@ -25,14 +23,14 @@ def get_pg_engine():
     ok=True
     sql_engine = {}
     try:
-        connect_string = f'postgresql+psycopg2://{dbcn.DB_USER}:{dbcn.DB_PASS}@{dbcn.DB_HOST}:{dbcn.DB_PORT}/{dbcn.DB_DATABASE}'
+        connect_string = f'postgresql+psycopg2://{cn.DB_USER}:{cn.DB_PASS}@{cn.DB_HOST}:{cn.DB_PORT}/{cn.DB_DATABASE}'
         sql_engine = create_engine(connect_string, pool_recycle=3600)
     except Exception as ex:
         print(ex)
         ok=False
     return sql_engine, ok
 
-def get_sqlite_connection(db_file):
+def get_sqlite_connection(db_file: str):
     """
     Connect to an SQlite database, if db file does not exist it will be created
     :param db_file: absolute or relative path of db file
@@ -65,9 +63,17 @@ def execute_non_query(cmd: str, cn)-> bool:
     return ok
     
     
-def execute_query(query: str, cn) -> pd.DataFrame:
-    """
-    Executes a query and returns a dataframe with the results
+def execute_query(query: str, cn: psycopg2.extensions.connection) -> pd.DataFrame:
+    """executes a database query
+
+    Args:
+        query (str): sql query string
+        cn (psycopg2.extensions.connection): database connection
+
+    Returns:
+        pd.DataFrame: [description]
+    """    """
+    
     """
 
     ok= False

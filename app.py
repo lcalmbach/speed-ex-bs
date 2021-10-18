@@ -11,10 +11,10 @@ from queries import qry
 import database as db
 import socket
 
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-13'
+VERSION_DATE = '2021-10-18'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets8.lottiefiles.com/private_files/lf30_zcwz0fha.json'
@@ -61,7 +61,6 @@ def main():
 
     texts = get_texts()
     conn = db.get_pg_connection()
-    st.sidebar.markdown(f"## {my_name}")
     menu_action = st.sidebar.selectbox('Menu',['Info','Karte','Statistik'])
     if menu_action == 'Info':
         app_info.show_menu(texts['app_info'], conn)
