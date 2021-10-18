@@ -9,7 +9,6 @@ import json
 import sqlite3
 from queries import qry
 import database as db
-import socket
 
 __version__ = '0.0.9'
 __author__ = 'Lukas Calmbach'
