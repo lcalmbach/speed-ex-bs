@@ -9,6 +9,7 @@ import json
 import sqlite3
 from queries import qry
 import database as db
+import socket
 
 __version__ = '0.0.8'
 __author__ = 'Lukas Calmbach'
@@ -52,7 +53,7 @@ def main():
     st.set_page_config(
         page_title=my_name,
         layout="wide")
-
+    st.write(socket.gethostname())
     lottie_search_names, ok = get_lottie()
     if ok:
         with st.sidebar:
