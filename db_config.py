@@ -2,7 +2,7 @@ import os
 import socket
 
 
-if socket.gethostname() == 'speed-ex-bs':
+if socket.gethostname() == 'cc75a393-92bb-4bff-8248-0d379f57cff7':
     DB_USER = "dxkqwxlfbaffnk"
     DB_PSSWD = os.environ.get('DB_PSSWD')
     DB_HOST = 'ec2-54-216-17-9.eu-west-1.compute.amazonaws.com'
