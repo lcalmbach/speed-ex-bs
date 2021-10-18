@@ -53,7 +53,7 @@ def main():
     st.set_page_config(
         page_title=my_name,
         layout="wide")
-    st.write(socket.gethostname())
+
     lottie_search_names, ok = get_lottie()
     if ok:
         with st.sidebar:

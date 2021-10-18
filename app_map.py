@@ -461,7 +461,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     
     settings = init_settings()
     df, df_all_violations, ok = prepare_map_data(conn)
-    st.write(df.head())
+    # st.write(df.head())
     df['rang'] = df[settings['rank_param']].rank(method='min').astype('int')
 
     station_dic =  get_station_list(df)
