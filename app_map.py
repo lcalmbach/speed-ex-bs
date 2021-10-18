@@ -454,7 +454,6 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     
     df_filtered = df.query(f"messung_id == @station")
     st.markdown(get_station_title())
-    st.write(df_filtered.head())
     if len(df_filtered) > 0:
         chart = plot_map(df_filtered, settings)
         st.pydeck_chart(chart)
@@ -467,13 +466,13 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         st.markdown(explain(df_filtered,settings),unsafe_allow_html=True)
 
 def show_menu(texts, conn):    
-    menu_item = st.sidebar.selectbox('Optionen', ['Übersicht', 'Zeitliche Analyse', 'Ranglisten', 'Messtation Analyse'])
-    if menu_item == 'Übersicht':
+    menu_item = st.sidebar.selectbox('Optionen', texts['menu_options'])
+    if menu_item == texts['menu_options'][0]:
         show_uebersicht(conn, texts)
-    elif menu_item ==  'Zeitliche Analyse':
+    elif menu_item ==  texts['menu_options'][1]:
         show_timemachine(conn)
-    elif menu_item ==  'Ranglisten':
+    elif menu_item ==  texts['menu_options'][2]:
         show_ranking(conn)
-    elif menu_item ==  'Messtation Analyse':
+    elif menu_item ==  texts['menu_options'][3]:
         show_station_analysis(conn)
                 
