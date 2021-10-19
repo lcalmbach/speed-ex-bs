@@ -48,7 +48,8 @@ qry = {
         from 
             velocity t1 
             inner join station t2 on t2.id = t1.station_id
-        """
+        """,
+    "velocity_by_station": "select * from v_velocity_by_station",
 }
 
 

@@ -10,10 +10,10 @@ import sqlite3
 from queries import qry
 import database as db
 
-__version__ = '0.0.9'
+__version__ = '0.0.10'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-18'
+VERSION_DATE = '2021-10-19'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets8.lottiefiles.com/private_files/lf30_zcwz0fha.json'

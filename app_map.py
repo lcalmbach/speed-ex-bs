@@ -84,7 +84,7 @@ def plot_map(df: pd.DataFrame, settings: object):
         return r
 
 
-def show_uebersicht(conn, texts):
+def show_summary(conn, texts):
 
     @st.experimental_memo()   
     def prepare_data(_conn):    
@@ -122,7 +122,7 @@ def show_uebersicht(conn, texts):
     df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime('%d.%m.%Y'))
     midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
-    chart = plot_map(df_filtered.iloc[3:], settings)
+    chart = plot_map(df_filtered, settings)
     st.pydeck_chart(chart)
     st.markdown(texts['instructions'].format(min_year, max_year))    
 
@@ -292,11 +292,11 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
 
 
 def show_ranking(conn):
-    def explain(df_filtered,settings):
-        if len(df_filtered) == 1:
+    def explain(df_filtered,settingsm, rank):
+        if len(df_filtered) > 0:
             dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position von Messtation {dic['messung_id']} mit Rang {dic['rang']} Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
-Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
+            return f"""Die Karte zeigt die Position von Messtation {dic['messung_id']} mit Rang {rank[0]} bis {rank[0]}. Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
+*{settings['rank_param']}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
             """
         else:
             return ''
@@ -313,8 +313,6 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
                 [type]: [description]
             """   
             
-            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','address','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
-            df = df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
             df = helper.set_column_types(df)
             df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
             df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
@@ -325,7 +323,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
             return df
 
-        df, ok, err_msg = db.execute_query(qry['all_violations'], _conn)     
+        df, ok, err_msg = db.execute_query(qry['velocity_by_station'], _conn)     
         df = add_calculated_fields(df)   
         return df, ok        
 
@@ -369,12 +367,13 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     df = df.sort_values('rang')
 
     settings['midpoint'] = (np.average(df['latitude']), np.average(df['longitude']))
-    rank = st.select_slider('Rang', options=list(df['rang'].unique()))
-    df_filtered = df.query(f"rang == @rank")
+    max_rank = int(df['rang'].max())
+    rank = st.sidebar.slider('Rang', 1,max_rank,(1,10))
+    df_filtered = df.query(f"(rang >= @rank[0]) & (rang <= @rank[1])")
     if len(df_filtered) > 0:
         chart = plot_map(df_filtered, settings)
         st.pydeck_chart(chart)
-        st.markdown(explain(df_filtered,settings),unsafe_allow_html=True)
+        st.markdown(explain(df_filtered,settings,rank),unsafe_allow_html=True)
 
 
 def show_station_analysis(conn):
@@ -413,13 +412,10 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             _df = _df.rename(columns = {'max': 'max_velocity', 'count':'anz', 'date_time':'zeit'})
             return _df
 
-        df_all_violations, ok, err_msg = db.execute_query(qry['all_violations'], _conn)   
-        st.write(df_all_violations.head())
-        # take only hours so all values will be aggregates by the hour, seems to be the easiest to achieve the y-m-d H time format 
-        df_grouped_by_stations = add_calculated_fields(df_all_violations)   
-        df_all_violations = group_by_hour(df_all_violations)
+        df, ok = db.execute_query(qry['all_violations'], _conn)
+        df = add_calculated_fields(df)   
         
-        return df_grouped_by_stations, df_all_violations, ok        
+        return df, ok        
 
     def get_tooltip_html():
         return ""
@@ -460,7 +456,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         return f"### Messtation {x['messung_id']} {x['address']}, von: {x['start_date']} bis: {x['end_date']}"
     
     settings = init_settings()
-    df, df_all_violations, ok = prepare_map_data(conn)
+    df, ok = prepare_map_data(conn)
     # st.write(df.head())
     df['rang'] = df[settings['rank_param']].rank(method='min').astype('int')
 
@@ -485,11 +481,10 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 def show_menu(texts, conn):    
     menu_item = st.sidebar.selectbox('Optionen', texts['menu_options'])
     if menu_item == texts['menu_options'][0]:
-        show_uebersicht(conn, texts)
+        show_summary(conn, texts)
     elif menu_item ==  texts['menu_options'][1]:
-        show_timemachine(conn)
-    elif menu_item ==  texts['menu_options'][2]:
         show_ranking(conn)
-    elif menu_item ==  texts['menu_options'][3]:
-        show_station_analysis(conn)
+    elif menu_item ==  texts['menu_options'][2]:
+        st.info("Habe etwas Geduld, das wird bald auch funktionieren 🚀")
+        # show_station_analysis(conn)
                 
