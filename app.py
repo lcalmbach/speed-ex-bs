@@ -10,10 +10,10 @@ import sqlite3
 from queries import qry
 import database as db
 
-__version__ = '0.0.10'
+__version__ = '0.0.11'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-19'
+VERSION_DATE = '2021-10-20'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets8.lottiefiles.com/private_files/lf30_zcwz0fha.json'
@@ -25,12 +25,6 @@ APP_INFO = f"""<div style="background-color:powderblue; padding: 10px;border-rad
     source: <a href="{SOURCE_URL}">data.bs</a>
     <br><a href="{GIT_REPO}">git-repo</a>
     """
-DB_FILE_PATH = "velocity.sqlite3"
-
-
-def get_connection():
-    conn = sqlite3.connect(DB_FILE_PATH)
-    return conn
 
 @st.experimental_memo()
 def get_lottie():
