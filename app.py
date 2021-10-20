@@ -60,12 +60,13 @@ def main():
 
     texts = get_texts()
     conn = db.get_pg_connection()
-    menu_action = st.sidebar.selectbox('Menu',['Info','Karte','Statistik'])
-    if menu_action == 'Info':
+    menu = ['Info','Karte','Statistik']
+    menu_action = st.sidebar.selectbox('Menu',menu)
+    if menu_action == menu[0]:
         app_info.show_menu(texts['app_info'], conn)
-    elif menu_action == 'Karte':
+    elif menu_action == menu[1]:
         app_map.show_menu(texts['app_map'], conn)
-    elif menu_action == 'Statistik':
+    elif menu_action == menu[2]:
         app_stats.show_menu(texts['app_stats'], conn)
     st.sidebar.markdown(APP_INFO, unsafe_allow_html=True)
 

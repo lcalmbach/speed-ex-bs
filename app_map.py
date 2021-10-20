@@ -14,6 +14,7 @@ import helper
 
 lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'anz', 'fahrzeuge']
 
+
 def plot_map(df: pd.DataFrame, settings: object):
     """
     Generates a map plot
@@ -131,7 +132,7 @@ def plot_barchart(df,settings):
     chart = alt.Chart(df).mark_bar().encode(
         x=settings['x'],
         y=settings['y'],
-        tooltip=['hour','sum(anz)']
+        tooltip=['hour','sum(count)']
     ).properties(
         width=settings['width'],
         height=settings['height'],
@@ -143,7 +144,7 @@ def plot_linechart(df,settings):
     chart = alt.Chart(df).mark_line().encode(
         x=settings['x'],
         y=settings['y'],
-        tooltip=['zeit','anz']
+        tooltip=['hour','count']
     ).properties(
         width=settings['width'],
         height=settings['height']
@@ -295,8 +296,9 @@ def show_ranking(conn):
     def explain(df_filtered,settingsm, rank):
         if len(df_filtered) > 0:
             dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position von Messtation {dic['messung_id']} mit Rang {rank[0]} bis {rank[0]}. Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
-*{settings['rank_param']}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
+            return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {rank[0]} bis {rank[0]}. Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
+*{settings['rank_param']}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Rang 1 entspricht 
+der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*. Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
             """
         else:
             return ''
@@ -362,14 +364,14 @@ def show_ranking(conn):
     
     # start
     settings = init_settings()
-    df, ok = prepare_map_data(conn, settings)
-    df['rang'] = df[settings['rank_param']].rank(method='min').astype('int')
-    df = df.sort_values('rang')
+    df_station, ok = prepare_map_data(conn, settings)
+    df_station['rang'] = df_station[settings['rank_param']].rank(method='min').astype('int')
+    df_station = df_station.sort_values('rang')
 
-    settings['midpoint'] = (np.average(df['latitude']), np.average(df['longitude']))
-    max_rank = int(df['rang'].max())
+    settings['midpoint'] = (np.average(df_station['latitude']), np.average(df_station['longitude']))
+    max_rank = int(df_station['rang'].max())
     rank = st.sidebar.slider('Rang', 1,max_rank,(1,10))
-    df_filtered = df.query(f"(rang >= @rank[0]) & (rang <= @rank[1])")
+    df_filtered = df_station.query(f"(rang >= @rank[0]) & (rang <= @rank[1])")
     if len(df_filtered) > 0:
         chart = plot_map(df_filtered, settings)
         st.pydeck_chart(chart)
@@ -388,33 +390,19 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
     @st.experimental_memo(suppress_st_warning=True)   
     def prepare_map_data(_conn):
-        def add_calculated_fields(df):
-            df['date_time'] = pd.to_datetime(df['date_time'], format="%d.%m.%y %H")
-            df['latitude']=df['latitude'].astype('float')
-            df['longitude']=df['longitude'].astype('float')
-            
-            groupby_fields_fields = ['messung_id', 'ort', 'address', 'richtung','richtung_strasse','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
-            df = df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
-            df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
-            df['diff_v50'] = ( df['v50'] - df['zone']) 
-            df['diff_v85'] = ( df['v85'] - df['zone']) 
-            df['diff_v50_perc'] = df['diff_v50'] / 100
-            df['diff_v85_perc'] = df['diff_v85'] / df['zone'] * 100
-            return df
+        df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
+        df = helper.set_column_types(df)
+        df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
+        return df, ok     
 
-        def group_by_hour(_df):
-            """
-            aggregates all violations to hourly values used to drawthe time series 
-            """
-            _df['hour'] = _df['date_time'].dt.hour  
-            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','date_time','hour','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','start_date','end_date']
-            _df = _df.groupby(groupby_fields_fields)['velocity_kmph'].agg(['max','count']).reset_index()
-            _df = _df.rename(columns = {'max': 'max_velocity', 'count':'anz', 'date_time':'zeit'})
-            return _df
+    def get_velocity_data(messung_id, _conn):
+        sql = qry['station_velocities'].format(messung_id)
+        df, ok, err_msg = db.execute_query(sql, _conn)
+        return df, ok     
 
-        df, ok = db.execute_query(qry['all_violations'], _conn)
-        df = add_calculated_fields(df)   
-        
+    def get_velocity_hour_data(messung_id, _conn):
+        sql = qry['station_velocities_by_hour'].format(messung_id)
+        df, ok, err_msg = db.execute_query(sql, _conn)
         return df, ok        
 
     def get_tooltip_html():
@@ -431,52 +419,61 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         
         return settings
 
-    def show_plots(richtung, station):
-        df = df_all_violations.query('(messung_id==@station) & (richtung==@richtung)')
-        
-        if len(df) > 0:
-            settings['x'] = alt.X("zeit:T")
-            settings['y'] = alt.Y("anz:Q")
-            rec = df_filtered.query('richtung == @richtung').iloc[0].to_dict()
-            st.write(f"Richtung {rec['richtung']}, {rec['richtung_strasse']}")
+    def show_plots(df_velocities, dic_station):
+        if len(df_velocities) > 0:
+            settings['x'] = alt.X("date_time:T")
+            settings['y'] = alt.Y("count:Q")
+            station_id = dic_station['id']
+            st.write(f"Richtung {dic_station['richtung']}, {dic_station['richtung_strasse']}")
             st.write('Zeitlicher Verlauf, Anzahl Geschwindkeitsüberschreitungen')
-            chart = plot_linechart(df,settings)
+            chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
             
             st.write('Anzahl Geschwindkeitsüberschreitungen aggregiert nach Tageszeit über Messperiode')
             settings['x'] = alt.X("hour:O")
-            settings['y'] = alt.Y("sum(anz):Q")
-            chart = plot_barchart(df,settings)
+            settings['y'] = alt.Y("count:Q")
+            chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
         else:
-            st.write(f'keine Daten für Richtung {richtung}')
+            st.write(f"keine Daten für Richtung {dic_station['richtung']}")
 
-    def get_station_title():
-        x = df_filtered.iloc[0].to_dict()
+    def get_station_title(df_station):
+        x = df_station.iloc[0].to_dict()
         return f"### Messtation {x['messung_id']} {x['address']}, von: {x['start_date']} bis: {x['end_date']}"
     
     settings = init_settings()
-    df, ok = prepare_map_data(conn)
+    df_stations, ok = prepare_map_data(conn)
     # st.write(df.head())
-    df['rang'] = df[settings['rank_param']].rank(method='min').astype('int')
+    df_stations['rang'] = df_stations[settings['rank_param']].rank(method='min').astype('int')
 
-    station_dic =  get_station_list(df)
-    station = st.sidebar.selectbox('Wähle Messstation', list(station_dic.keys()),
+    station_dic =  get_station_list(df_stations)
+    messung_id = st.sidebar.selectbox('Wähle Messstation', list(station_dic.keys()),
         format_func=lambda x: station_dic[x])   
-    settings['midpoint'] = (np.average(df['latitude']), np.average(df['longitude']))
-    
-    df_filtered = df.query(f"messung_id == @station")
-    st.markdown(get_station_title())
-    if len(df_filtered) > 0:
-        chart = plot_map(df_filtered, settings)
+    settings['midpoint'] = (np.average(df_stations['latitude']), np.average(df_stations['longitude']))
+    df_station = df_stations.query('messung_id == @messung_id')
+    df_velocities, ok = get_velocity_data(messung_id, conn)
+
+    st.markdown(get_station_title(df_station))
+    if len(df_station) > 0:
+        chart = plot_map(df_station, settings)
         st.pydeck_chart(chart)
+        sql =  qry['station_velocities'].format(messung_id)
+        df_velocities, ok, err_msg = db.execute_query(sql, conn)
         col1, col2 = st.columns(2)
         with col1:
-            show_plots(1, station)
+            dic_station = df_station.query('(messung_id == @messung_id) & (richtung == 1)')
+            if len(dic_station) > 0:
+                dic_station = dic_station.iloc[0].to_dict()
+                df_filtered = df_velocities.query(f"station_id == {dic_station['id']}")
+                show_plots(df_filtered, dic_station)
         with col2:
-            show_plots(2,station)
+            dic_station = df_station.query('(messung_id == @messung_id) & (richtung == 2)')
+            if len(dic_station)>0:
+                dic_station = dic_station.iloc[0].to_dict()
+                df_filtered = df_velocities.query(f"station_id == {dic_station['id']}")
+                show_plots(df_velocities, dic_station)
                 
-        st.markdown(explain(df_filtered,settings),unsafe_allow_html=True)
+        st.markdown(explain(df_station,settings),unsafe_allow_html=True)
 
 def show_menu(texts, conn):    
     menu_item = st.sidebar.selectbox('Optionen', texts['menu_options'])
@@ -485,6 +482,5 @@ def show_menu(texts, conn):
     elif menu_item ==  texts['menu_options'][1]:
         show_ranking(conn)
     elif menu_item ==  texts['menu_options'][2]:
-        st.info("Habe etwas Geduld, das wird bald auch funktionieren 🚀")
-        # show_station_analysis(conn)
+        show_station_analysis(conn)
                 

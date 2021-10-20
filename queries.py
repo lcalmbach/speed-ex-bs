@@ -22,6 +22,7 @@ qry = {
             ,latitude
             ,longitude
             ,EXTRACT(year from start_date) AS jahr
+            ,id
         from 
             station
         where 
@@ -50,6 +51,36 @@ qry = {
             inner join station t2 on t2.id = t1.station_id
         """,
     "velocity_by_station": "select * from v_velocity_by_station",
+
+    "station_velocities": """select 
+        messung_id
+        , station_id
+        , date_trunc('hour',date_time) as date_time
+        , TO_CHAR(date_time, 'HH24')::INT as hour
+        , count(*) as count
+        , max(velocity_kmph) as max_velocity
+        , max(exceedance_kmph) as max_exceedance 
+    from 
+        velocity where messung_id = {}
+    group by 
+        messung_id
+        , station_id
+        , date_trunc('hour',date_time)
+        , TO_CHAR(date_time, 'HH24')::INT""",
+    
+    "station_velocities_by_hour":"""select 
+        messung_id
+        , station_id
+        , TO_CHAR(date_time, 'HH24')::INT as hour
+        , count(*) as count
+        , max(velocity_kmph) as max_velocity
+        , max(exceedance_kmph) as max_exceedance 
+    from 
+        velocity where station_id = {}
+    group by 
+            messung_id
+        , station_id
+        , TO_CHAR(date_time, 'HH24')::INT""",
 }
 
 
