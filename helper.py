@@ -1,5 +1,6 @@
 import pandas as pd
 import const as cn
+from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
 def set_column_types(df:pd.DataFrame)->pd.DataFrame:
     if 'latitude' in df.columns:
@@ -23,3 +24,24 @@ def add_calculated_fields(df):
     df['diff_v50_perc'] = df['diff_v50'] / 100
     df['diff_v85_perc'] = df['diff_v85'] / df['zone'] * 100
     return df
+
+def show_table(data, formatted_columns):
+        """
+        displays the selected columns in a table
+        """
+
+        def get_format():
+            gb = GridOptionsBuilder.from_dataframe(data)
+            gb.configure_default_column(groupable=False, value=True, enableRowGroup=False, aggFunc='sum', editable=False)
+            gb.configure_grid_options(domLayout='normal')
+            for row in formatted_columns:
+                if row['column_format'] != {}:
+                    x = row['column_format']
+                    gb.configure_column(row['label'], type=x['type'], precision=x['precision'])
+            return gb.build()
+
+        if len(data)>0:
+            gridOptions = get_format()
+            AgGrid(data,gridOptions=gridOptions)
+        else:
+            pass

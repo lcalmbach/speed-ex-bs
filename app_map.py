@@ -6,6 +6,7 @@ import pandas as pd
 import pydeck as pdk
 import numpy as np
 # import random
+from datetime import datetime, time
 from queries import qry
 
 import const as cn
@@ -138,8 +139,8 @@ def show_summary(conn, texts):
     df_filtered = df.query('zone == @zone') if zone != all_expression else df_filtered
     df_filtered = df_filtered[['longitude','latitude','messung_id', 'address','zone','start_date','end_date']]
     
-    df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime('%d.%m.%Y'))
-    df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime('%d.%m.%Y'))
+    df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
+    df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
     midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
     chart = plot_map(df_filtered, settings)
@@ -445,11 +446,11 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
             settings['y'] = alt.Y("count:Q")
             #station_id = dic_station['id']
             st.write(f"Richtung {dic_station['richtung']}, {dic_station['richtung_strasse']}")
-            st.write('Zeitlicher Verlauf, Anzahl Geschwindkeitsüberschreitungen')
+            st.write('Zeitlicher Verlauf, Anzahl Geschwindikeitsüberschreitungen (pro Stunde)')
             chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
             
-            st.write('Anzahl Geschwindkeitsüberschreitungen aggregiert nach Tageszeit über Messperiode')
+            st.write('Anzahl Geschwindikeitsüberschreitungen aggregiert nach Tageszeit über Messperiode')
             settings['x'] = alt.X("hour:O")
             settings['y'] = alt.Y("count:Q")
             chart = plot_barchart(df_velocities,settings)
@@ -459,7 +460,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
     def get_station_title(df_station):
         x = df_station.iloc[0].to_dict()
-        return f"### Messtation {x['messung_id']} {x['address']}, von: {x['start_date']} bis: {x['end_date']}"
+        return f"### Messtation {x['messung_id']} {x['address']}, von {x['start_date'].strftime(cn.FORMAT_DMY)} bis {x['end_date'].strftime(cn.FORMAT_DMY)}"
     
     settings = init_settings()
     df_stations, ok = prepare_map_data(conn)

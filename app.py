@@ -37,7 +37,7 @@ def get_lottie():
         ok = False
     return r,ok
 
-#@st.experimental_memo()
+@st.experimental_memo()
 def get_texts():
     t = json.loads(open(cn.TEXTS, encoding='utf-8').read())
     return t
@@ -52,10 +52,13 @@ def main():
         with st.sidebar:
             st_lottie(lottie_search_names, height=80, loop=True)
 
+    st.sidebar.markdown(f"### {my_name}")
+    
     texts = get_texts()
     conn = db.get_pg_connection()
     menu = ['Info','Karte','Statistik']
     menu_action = st.sidebar.selectbox('Menu',menu)
+    
     if menu_action == menu[0]:
         app_info.show_menu(texts['app_info'], conn)
     elif menu_action == menu[1]:

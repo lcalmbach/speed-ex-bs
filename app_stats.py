@@ -4,6 +4,8 @@ import numpy as np
 import database as db
 from queries import qry
 from datetime import datetime
+import const as cn
+import helper
 
 f_int = '.0f'
 f_dec = '.1f'
@@ -27,12 +29,15 @@ def get_violations(_conn):
 
 # @st.experimental_memo()     
 def get_stations(_conn):
+    statfields =['messung_id','address','ort','start_date','end_date','zone','richtung_strasse','richtung','fahrzeuge','uebertretungsquote','v50','v85']
     df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
-    df['start_date'] = convert_to_local_time(df['start_date'])
-    df['end_date'] = convert_to_local_time(df['end_date'])
+    df = helper.format_time_columns(df,('start_date','end_date'),cn.FORMAT_DMY)
     df['address'] = df['address'].astype(str)
     df['richtung_strasse'] = df['richtung_strasse'].astype(str)
-
+    df['fahrzeuge'] = df['fahrzeuge'].astype(int)
+    df['v50'] = df['v50'].astype(int)
+    df['v85'] = df['v85'].astype(int)
+    df = df[statfields]
     return df
 
 def get_lst_ort(stations):
@@ -99,9 +104,7 @@ def station_stats(conn):
         return _stats
 
     stations = get_stations(conn)
-    
     station_sel = get_filter()
-    #par = st.sidebar.selectbox('Wähle einen Parameter',['geschwindigkeit'])
     df_filtered = stations.query("messung_id in @station_sel") if len(station_sel) > 0 else stations
     return df_filtered
     
@@ -122,7 +125,7 @@ def show_menu(texts, conn):
         st.write(df)
     elif menu_item ==  menu[1]:
         df = station_stats(conn)
-        st.write(df)
+        helper.show_table(df,[])
     elif menu_item ==  menu[2]:
         dummy()
     elif menu_item ==  menu[3]:
