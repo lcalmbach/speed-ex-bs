@@ -30,3 +30,5 @@ else:
     DB_HOST = 'ec2-54-216-17-9.eu-west-1.compute.amazonaws.com'
     DB_DATABASE = 'd3f49ft1g3uc8t'
     DB_PORT = "5432"
+
+FORMAT_DMY = '%d.%m.%Y'

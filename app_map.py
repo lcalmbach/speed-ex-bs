@@ -12,7 +12,7 @@ import const as cn
 import database as db
 import helper
 
-lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'anz', 'fahrzeuge']
+lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'fahrzeuge']
 
 
 def plot_map(df: pd.DataFrame, settings: object):
@@ -86,6 +86,12 @@ def plot_map(df: pd.DataFrame, settings: object):
 
 
 def show_summary(conn, texts):
+    def get_title():
+        pass
+    
+    def get_filter_expression():
+        pass
+
 
     @st.experimental_memo()   
     def prepare_data(_conn):    
@@ -107,6 +113,19 @@ def show_summary(conn, texts):
         """
         return text
 
+    def get_filter_expression():
+        if (zone != '<alle>') & (year  != '<alle>'):
+            return f"die Messstandorte für Geschwindikeitesmessungen im Jahr {year} in der Zone {zone}"
+        elif (zone != '<alle>'):
+            return f"die Messstandorte für Geschwindikeitesmessungen in den Jahren {min_year} bis {max_year} in der Zone {zone}"
+        elif (year  != '<alle>'):
+            return f"die Messstandorte für Geschwindikeitesmessungen im Jahr {year} in allen Zonen"
+        else:
+            return f"die Messstandorte für Geschwindikeitesmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
+
+        
+
+    st.markdown("### Übersicht über die Messsationen")
     df, ok = prepare_data(conn)
     min_year = int(df['jahr'].min())
     max_year = int(df['jahr'].max())
@@ -125,7 +144,7 @@ def show_summary(conn, texts):
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
     chart = plot_map(df_filtered, settings)
     st.pydeck_chart(chart)
-    st.markdown(texts['instructions'].format(min_year, max_year))    
+    st.markdown(texts['instructions'].format(get_filter_expression()))    
 
 
 def plot_barchart(df,settings):
@@ -296,9 +315,9 @@ def show_ranking(conn):
     def explain(df_filtered,settingsm, rank):
         if len(df_filtered) > 0:
             dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {rank[0]} bis {rank[0]}. Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
+            return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {rank[0]} bis {rank[-1]}. Die Rangliste erfolgt nach Parameter *{settings['rank_param']}*. 
 *{settings['rank_param']}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Rang 1 entspricht 
-der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*. Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
+der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*. Du findest die Definition aller Parameter auf der Infoseite. 
             """
         else:
             return ''
@@ -391,6 +410,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
     @st.experimental_memo(suppress_st_warning=True)   
     def prepare_map_data(_conn):
         df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
+        df = helper.add_calculated_fields(df)
         df = helper.set_column_types(df)
         df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
         return df, ok     
@@ -423,7 +443,7 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         if len(df_velocities) > 0:
             settings['x'] = alt.X("date_time:T")
             settings['y'] = alt.Y("count:Q")
-            station_id = dic_station['id']
+            #station_id = dic_station['id']
             st.write(f"Richtung {dic_station['richtung']}, {dic_station['richtung_strasse']}")
             st.write('Zeitlicher Verlauf, Anzahl Geschwindkeitsüberschreitungen')
             chart = plot_linechart(df_velocities,settings)

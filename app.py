@@ -16,7 +16,7 @@ __author_email__ = 'lcalmbach@gmail.com'
 VERSION_DATE = '2021-10-20'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
-LOTTIE_URL = 'https://assets8.lottiefiles.com/private_files/lf30_zcwz0fha.json'
+LOTTIE_URL = 'https://assets6.lottiefiles.com/packages/lf20_useqtj8t.json'
 SOURCE_URL = 'https://data.bs.ch/explore/dataset/100097'
 GIT_REPO = 'https://github.com/lcalmbach/speed-ex-bs'
 APP_INFO = f"""<div style="background-color:powderblue; padding: 10px;border-radius: 15px;">
@@ -50,7 +50,7 @@ def main():
     lottie_search_names, ok = get_lottie()
     if ok:
         with st.sidebar:
-            st_lottie(lottie_search_names, height=80, loop=False)
+            st_lottie(lottie_search_names, height=80, loop=True)
 
     texts = get_texts()
     conn = db.get_pg_connection()

@@ -1,4 +1,5 @@
 import pandas as pd
+import const as cn
 
 def set_column_types(df:pd.DataFrame)->pd.DataFrame:
     if 'latitude' in df.columns:
@@ -16,7 +17,7 @@ def format_time_columns(df:pd.DataFrame, cols: tuple, fmt):
 
 def add_calculated_fields(df):
     df = set_column_types(df)
-    df = format_time_columns(df, 'date_start', 'date_end')
+    df = format_time_columns(df, ('start_date', 'end_date'), cn.FORMAT_DMY)
     df['diff_v50'] = ( df['v50'] - df['zone']) 
     df['diff_v85'] = ( df['v85'] - df['zone']) 
     df['diff_v50_perc'] = df['diff_v50'] / 100

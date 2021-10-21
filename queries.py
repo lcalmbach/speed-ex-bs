@@ -81,6 +81,7 @@ qry = {
             messung_id
         , station_id
         , TO_CHAR(date_time, 'HH24')::INT""",
+    "exceedance_count": "select count(*) as count from velocity where exceedance_kmph > 0;"
 }
 
 
