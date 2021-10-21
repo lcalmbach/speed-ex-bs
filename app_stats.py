@@ -40,7 +40,7 @@ def get_lst_ort(stations):
 
 @st.experimental_memo() 
 def get_dic_stations(stations): 
-    stations['value'] = stations["adresse"].str.cat(stations['ort'], sep=", ")
+    stations['value'] = stations["address"].str.cat(stations['ort'], sep=", ")
     #stations = stations.sort_values('value')
     return dict(zip(stations['messung_id'], stations['value']))
 
@@ -98,16 +98,12 @@ def station_stats(conn):
         _stats = _stats.drop(['messung_id'], axis=1)
         return _stats
 
-    df_measurements= get_violations(conn)
     stations = get_stations(conn)
     
     station_sel = get_filter()
-    par = st.sidebar.selectbox('Wähle einen Parameter',['geschwindigkeit'])
-    df_filtered = df_measurements.query("messung_id in @station_sel")
-    for station in station_sel:
-        df_filtered = df_measurements.query("messung_id==@station")
-        st.write(get_dic_stations(stations)[station])
-        st.write(get_station_stat(df_filtered, par))
+    #par = st.sidebar.selectbox('Wähle einen Parameter',['geschwindigkeit'])
+    df_filtered = stations.query("messung_id in @station_sel") if len(station_sel) > 0 else stations
+    return df_filtered
     
 
 def dummy():
@@ -124,11 +120,12 @@ def show_menu(texts, conn):
     if menu_item == menu[0]:
         df = summary_all(conn)
         st.write(df)
-    elif menu_item ==  menu[0]:
-        station_stats(conn)
-    elif menu_item ==  menu[0]:
+    elif menu_item ==  menu[1]:
+        df = station_stats(conn)
+        st.write(df)
+    elif menu_item ==  menu[2]:
         dummy()
-    elif menu_item ==  menu[0]:
+    elif menu_item ==  menu[3]:
         dummy()
     
                 

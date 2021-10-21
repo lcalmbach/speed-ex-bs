@@ -81,7 +81,15 @@ qry = {
             messung_id
         , station_id
         , TO_CHAR(date_time, 'HH24')::INT""",
-    "exceedance_count": "select count(*) as count from velocity where exceedance_kmph > 0;"
+    "exceedance_count": "select count(*) as count from velocity where exceedance_kmph > 0;",
+    "station_percentiles": """SELECT 
+        station_id 
+        ,percentile_cont(0.50) WITHIN GROUP (ORDER BY velocity_kmph) as "P50"
+        ,percentile_cont(0.75) WITHIN GROUP (ORDER BY velocity_kmph) as "P75"
+        ,percentile_cont(0.85) WITHIN GROUP (ORDER BY velocity_kmph) as "P90"
+        ,percentile_cont(0.95) WITHIN GROUP (ORDER BY velocity_kmph) as "P95"
+    FROM velocity
+    group by station_id;"""
 }
 
 
