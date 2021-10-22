@@ -27,11 +27,32 @@ def get_violations(_conn):
     df, ok, err_msg = db.execute_query(qry['exceedance_count'], _conn)
     return df.iloc[0]['count']
 
-# @st.experimental_memo()     
-def get_stations(_conn):
-    statfields =['messung_id','address','ort','start_date','end_date','zone','richtung_strasse','richtung','fahrzeuge','uebertretungsquote','v50','v85']
+@st.experimental_memo()     
+def get_locations(_conn):
+    """Each locations can have 1 or 2 directions, each location 1 direction is a station
+
+    Args:
+        none
+
+    Returns:
+        [pd.DataFrame]: table of locations
+    """
+    statfields =['messung_id','address','ort','start_date','end_date','zone','richtung_strasse','fahrzeuge','uebertretungsquote','v50','v85']
     df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
     df = helper.format_time_columns(df,('start_date','end_date'),cn.FORMAT_DMY)
+    df['address'] = df['address'].astype(str)
+    df['richtung_strasse'] = df['richtung_strasse'].astype(str)
+    df['fahrzeuge'] = df['fahrzeuge'].astype(int)
+    df['v50'] = df['v50'].astype(int)
+    df['v85'] = df['v85'].astype(int)
+    df = df[statfields]
+    return df
+
+
+@st.experimental_memo()     
+def get_stations(_conn):
+    statfields =['station_id','messung_id','address','ort','start_date','end_date','zone','richtung_strasse','richtung','fahrzeuge','uebertretungsquote','v50','v85']
+    df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
     df['address'] = df['address'].astype(str)
     df['richtung_strasse'] = df['richtung_strasse'].astype(str)
     df['fahrzeuge'] = df['fahrzeuge'].astype(int)
@@ -45,9 +66,15 @@ def get_lst_ort(stations):
 
 @st.experimental_memo() 
 def get_dic_stations(stations): 
-    stations['value'] = stations["address"].str.cat(stations['ort'], sep=", ")
+    stations['value'] = stations["address"].str.cat([stations['ort'], stations['richtung_strasse']], sep=", ")
+    stations = stations.sort_values('value')
+    return dict(zip(stations['station_id'], stations['value']))
+
+@st.experimental_memo() 
+def get_dic_locations(locations): 
+    locations['value'] = locations["address"].str.cat(locations['ort'], sep=", ")
     #stations = stations.sort_values('value')
-    return dict(zip(stations['messung_id'], stations['value']))
+    return dict(zip(locations['station_id'], locations['value']))
 
 def append_row(df, par, value, fmt):
     if isinstance(value, datetime):
@@ -88,31 +115,103 @@ def station_stats(conn):
         station_sel = st.sidebar.multiselect("Wähle eine oder mehrere Messstationen", dic_stations.keys(), format_func=lambda x: dic_stations[x])   
         return station_sel
     
-    def get_station_stat(df, par):
-        def percentile(n):
-            def percentile_(x):
-                return np.percentile(x, n)
-            percentile_.__name__ = 'percentile_%s' % n
-            return percentile_
-            
-        #group_by_fields = ['messung_id', 'strasse', 'hausnummer', 'ort', 'richtung']
-        group_by_fields = ['messung_id']
-        _stats = df.groupby(group_by_fields)[par].agg(['min','max','mean', 'std', 'count', percentile(5), percentile(25), percentile(50), percentile(75), percentile(90), percentile(95), percentile(99)]).reset_index()
-        val_vars = _stats.drop(['messung_id'], axis=1).columns
-        _stats = pd.melt(_stats, id_vars=['messung_id'], value_vars=val_vars)
-        _stats = _stats.drop(['messung_id'], axis=1)
-        return _stats
 
     stations = get_stations(conn)
     station_sel = get_filter()
-    df_filtered = stations.query("messung_id in @station_sel") if len(station_sel) > 0 else stations
+    df_filtered = stations.query("station_id in @station_sel") if len(station_sel) > 0 else stations
+    df_filtered = df_filtered.drop(['station_id'], axis=1)
     return df_filtered
-    
 
-def dummy():
-    # df = pd.read_parquet('./violations.parquet')
-    # st.write(df.head(100))
-    st.info("noch nicht implementiert, kommt bald!")
+
+def weekday_stats(conn):
+    def get_filter():
+        dic_stations = get_dic_stations(stations)
+        station_sel = st.sidebar.multiselect("Wähle eine oder mehrere Messstationen", dic_stations.keys(), format_func=lambda x: dic_stations[x])   
+        return station_sel
+    
+    #@st.experimental_memo()     
+    def get_exceedance_data():
+        df, ok, err_msg = db.execute_query(qry['station_exceedances_weekday'], conn)
+        return df
+
+    def rename_columns(df):
+        """Detects the weekday in the multiindex column title and generates a single index column name
+
+        Args:
+            df ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        cols = []
+        for c in df.columns:
+            if c[0] == 'station_id':
+                cols.append('station_id')
+            elif c[1] == 'Montag':
+                cols.append('Montag')
+            elif c[1] == 'Dienstag':
+                cols.append('Dienstag')
+            elif c[1] == 'Mittwoch':
+                cols.append('Mittwoch')
+            elif c[1] == 'Donnerstag':
+                cols.append('Donnerstag')
+            elif c[1] == 'Freitag':
+                cols.append('Freitag')
+            elif c[1] == 'Samstag':
+                cols.append('Samstag')
+            else:
+                cols.append('Sonntag')
+        df.columns = cols
+        df = df[['station_id','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']]
+        return df
+
+
+    stations = get_stations(conn)
+    station_sel = get_filter()
+    df_data = get_exceedance_data()
+    df_filtered = df_data.query("station_id in @station_sel") if len(station_sel) > 0 else df_data
+    df_filtered = helper.replace_day_ids(df_filtered, 'dow')
+
+    df_unmelted =  df_filtered[['station_id','dow','count']].pivot(index=['station_id'], columns='dow').reset_index()
+    df_unmelted = rename_columns(df_unmelted)
+    df_unmelted = df_unmelted.replace({'station_id': get_dic_stations(stations)})
+    df_unmelted = df_unmelted.rename(columns={'station_id': 'Messstation'})
+    return df_unmelted
+
+
+def hourly_stats(conn):
+    def get_filter():
+        dic_stations = get_dic_stations(stations)
+        station_sel = st.sidebar.multiselect("Wähle eine oder mehrere Messstationen", dic_stations.keys(), format_func=lambda x: dic_stations[x])   
+        return station_sel
+    
+    @st.experimental_memo()     
+    def get_exceedance_data():
+        df, ok, err_msg = db.execute_query(qry['station_exceedances_hour'], conn)
+        return df
+
+    def dissolve_multi_index(df):
+        df.columns = ['station_id','00','01','02','03','04','05','06','07','08','09','10','11',
+                                   '12','13','14','15','16','17','18','19','20','21','22','23']
+        return df
+
+    def get_description(df):
+        text = "Hier fehlt noch eine Beschreibung dieser Tabelle"
+        return text
+
+
+    stations = get_stations(conn)
+    station_sel = get_filter()
+    df_data = get_exceedance_data()
+    df_filtered = df_data.query("station_id in @station_sel") if len(station_sel) > 0 else df_data
+    df_unmelted = helper.add_leading_zeros(df_filtered, 'hour',2)
+    df_unmelted =  df_filtered[['station_id','hour','count']].pivot(index=['station_id'], columns='hour').reset_index()
+    df_unmelted = dissolve_multi_index(df_unmelted)
+    df_unmelted = df_unmelted.replace({'station_id': get_dic_stations(stations)})
+    df_unmelted = df_unmelted.rename(columns={'station_id': 'Messstation'})
+    text = get_description(df_unmelted)
+    return df_unmelted, text
+    
 
 def show_menu(texts, conn):    
 
@@ -120,15 +219,19 @@ def show_menu(texts, conn):
     
     menu_item = st.sidebar.selectbox('Optionen', menu)
     st.markdown(f"### {menu_item}")
+    text = "Hier fehlt noch eine Beschreibung dieser Tabelle"  # todo: implement
     if menu_item == menu[0]:
         df = summary_all(conn)
-        st.write(df)
+        helper.show_table(df,[])
     elif menu_item ==  menu[1]:
         df = station_stats(conn)
         helper.show_table(df,[])
     elif menu_item ==  menu[2]:
-        dummy()
+        df = weekday_stats(conn)
+        helper.show_table(df,[])
     elif menu_item ==  menu[3]:
-        dummy()
+        df, text = hourly_stats(conn)
+        helper.show_table(df,[])
+    st.markdown(text,unsafe_allow_html=True)
     
                 

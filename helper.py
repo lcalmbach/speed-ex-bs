@@ -45,3 +45,21 @@ def show_table(data, formatted_columns):
             AgGrid(data,gridOptions=gridOptions)
         else:
             pass
+
+def replace_day_ids(df, col):
+    week_dic = {0: 'Sonntag', 1: 'Montag', 2: 'Dienstag', 3: 'Mittwoch', 4: 'Donnerstag', 5: 'Freitag', 6: 'Samstag'}
+    return df.replace({col: week_dic})
+
+def add_leading_zeros(df, col,len):
+        """convert the month column
+
+        Args:
+            df ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        df[col] = df[col].astype(int)
+        df[col] = df[col].astype(str)
+        df[col]  = df[col].astype(str).str.zfill(len)
+        return df

@@ -8,6 +8,7 @@
         "instructions": "Die Karte zeigt {}. Wenn du mit dem Mauszeiger über die Standorte fährst, so werden die Details zum Standort angezeigt. Du kannst die Standorte in der Navigationsleiste nach Jahr und Zone filtern.",
         "menu_options": ["Übersicht", "Ranglisten", "Messstation Analyse"]
     },
-    "app_stats":{}
+    "app_stats":{},
+    "app_boxplot":{}
 }
 

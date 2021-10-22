@@ -7,7 +7,8 @@ qry = {
         """,
     "all_stations": """
         select
-            messung_id
+            id as station_id
+            ,messung_id
             ,address
             ,ort
             ,start_date
@@ -22,12 +23,42 @@ qry = {
             ,latitude
             ,longitude
             ,EXTRACT(year from start_date) AS jahr
-            ,id
         from 
             station
         where 
             latitude is not null
             and fahrzeuge > 0;
+            """,
+    "all_locations": """
+        select
+            messung_id
+            ,address
+            ,ort
+            ,start_date
+            ,end_date
+            ,zone
+            ,sum(fahrzeuge) as fahrzeuge
+            ,avg(uebertretungsquote) as avg_uebertretungsquote
+            ,avg(v50) as avg_v50
+            ,avg(v85) as avg_v85
+            ,latitude
+            ,longitude
+            ,EXTRACT(year from start_date) AS jahr
+        from 
+            station
+        where 
+            latitude is not null
+            and fahrzeuge > 0
+        group by 
+            messung_id
+            ,address
+            ,ort
+            ,start_date
+            ,end_date
+            ,zone
+            ,latitude
+            ,longitude
+            ,EXTRACT(year from start_date)
             """,
     "all_violations":"""select 
             t2.messung_id
@@ -89,7 +120,50 @@ qry = {
         ,percentile_cont(0.85) WITHIN GROUP (ORDER BY velocity_kmph) as "P90"
         ,percentile_cont(0.95) WITHIN GROUP (ORDER BY velocity_kmph) as "P95"
     FROM velocity
-    group by station_id;"""
+    group by station_id;""",
+
+    "station_exceedances": """
+        SELECT 
+            station_id 
+            ,t2.address
+            ,velocity_kmph
+            ,exceedance_kmph
+        from velocity t1
+        inner join station t2 on t2.id = t1.station_id""",
+
+    "station_exceedances_weekday": """
+        SELECT 
+            station_id 
+            ,EXTRACT(DOW FROM date_time) as dow
+            ,t2.address
+            ,count(*) as count
+            ,avg(velocity_kmph) as avg_velocity
+            ,avg(exceedance_kmph) as  avg_exceedance
+        from 
+            velocity t1
+            inner join station t2 on t2.id = t1.station_id
+        group by 
+            station_id 
+            ,t2.address
+            ,EXTRACT(DOW FROM date_time)
+        """,
+    
+    "station_exceedances_hour": """
+        SELECT 
+            station_id 
+            ,EXTRACT(HOUR FROM date_time) as hour
+            ,t2.address
+            ,count(*) as count
+            ,avg(velocity_kmph) as avg_velocity
+            ,avg(exceedance_kmph) as  avg_exceedance
+        from 
+            velocity t1
+            inner join station t2 on t2.id = t1.station_id
+        group by 
+            station_id 
+            ,t2.address
+            ,EXTRACT(HOUR FROM date_time)
+        """
 }
 
 
