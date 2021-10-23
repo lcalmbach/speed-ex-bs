@@ -45,7 +45,7 @@ def get_texts():
     return t
     
 def main():
-    locale.setlocale(locale.LC_ALL, 'deu_deu')
+    locale.setlocale(locale.LC_ALL, 'de_DE')
     st.set_page_config(
         page_title=my_name,
         layout="wide")
