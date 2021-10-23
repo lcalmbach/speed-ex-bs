@@ -4,3 +4,4 @@ __pycache__
 *.parquet
 *.sqlite3
 *.sqbpro
+todo.txt

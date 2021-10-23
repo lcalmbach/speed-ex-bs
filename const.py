@@ -1,6 +1,28 @@
 import os
 import socket
 
+# parameters
+
+PARAMETERS_DIC = {
+    'exceedance_rate': {'label': 'Übertretungsquote', 'unit': '%', 'type': 'float'},
+    'v50': {'label': 'V50', 'unit': 'km/h', 'type': 'float'},
+    'v85': {'label': 'V85', 'unit': 'km/h', 'type': 'float'},
+    'vehicles': {'label': 'Fahrzeuge', 'unit': '', 'type': 'int'},
+    'messung_id': {'label': 'Messung_ID', 'unit': '', 'type': 'int'},    
+    'address': {'label': 'Adresse', 'unit': '', 'type': 'str'},  
+    'location': {'label': 'Ort', 'unit': '', 'type': 'str'},  
+    'zone': {'label': 'Zone', 'unit': '', 'type': 'str'},  
+    'direction': {'label': 'Richtung', 'unit': '', 'type': 'int'},  
+    'direction_street': {'label': 'Richtung-Strasse', 'unit': '', 'type': 'str'},  
+    'start_date': {'label': 'Messbeginn', 'unit': '', 'type': 'date'},  
+    'end_date': {'label': 'Messende', 'unit': '', 'type': 'date'},  
+    'hour': {'label': 'Tageszeit', 'unit': '', 'type': 'str'},  
+    'weekday': {'label': 'Wochentag', 'unit': '', 'type': 'str'},  
+    'year': {'label': 'Jahr', 'unit': '', 'type': 'int'},  
+    'count_exc': {'label': 'Anzahl Übertretungen', 'unit': '', 'type': 'int'},  
+    'latitude': {'label': 'Länge', 'unit': '', 'type': 'float'},  
+    'longitude': {'label': 'Breite', 'unit': '', 'type': 'float'},  
+}
 # files
 TEXTS = './texts.json'
 QUERIES = './queries.json'
@@ -14,7 +36,6 @@ TOOLTIP_BACKCOLOR = 'white'
 TOOLTIP_FORECOLOR = 'black'
 ICON_DATA = {"url": "https://img.icons8.com/plasticine/100/000000/marker.png","width": 128,"height": 128,"anchorY": 128}
 #ICON_DATA = {"url": "https://img.icons8.com/material-outlined/24/000000/camera--v2.png","width": 128,"height": 128,"anchorY": 128}
-PARAMETERS_DIC = {'uebertretungsquote':'Überteretungsquote'}
 
 # database settings on heroku
 DEV_MACHINES = ('liestal')
@@ -32,3 +53,4 @@ else:
     DB_PORT = "5432"
 
 FORMAT_DMY = '%d.%m.%Y'
+WOCHE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']

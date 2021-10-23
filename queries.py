@@ -8,16 +8,15 @@ qry = {
     "all_stations": """
         select
             id as station_id
-            ,messung_id
-            ,address
-            ,ort
+            ,site_id
+            ,concat(street, ' ', house_number, ', ', location) as location
+            ,direction_street
             ,start_date
             ,end_date
             ,zone
-            ,richtung_strasse
-            ,richtung
-            ,fahrzeuge
-            ,uebertretungsquote
+            ,direction
+            ,vehicles
+            ,exceedance_rate
             ,"v50"
             ,"v85"
             ,latitude
@@ -27,18 +26,18 @@ qry = {
             station
         where 
             latitude is not null
-            and fahrzeuge > 0;
+            and vehicles > 0;
             """,
+
     "all_locations": """
         select
-            messung_id
-            ,address
-            ,ort
+            site_id
+            ,concat(street, ' ', house_number, ', ', ort) as address
             ,start_date
             ,end_date
             ,zone
-            ,sum(fahrzeuge) as fahrzeuge
-            ,avg(uebertretungsquote) as avg_uebertretungsquote
+            ,sum(vehicles) as vehicles
+            ,avg(exceedance_rate) as avg_exceedance_rate
             ,avg(v50) as avg_v50
             ,avg(v85) as avg_v85
             ,latitude
@@ -48,11 +47,10 @@ qry = {
             station
         where 
             latitude is not null
-            and fahrzeuge > 0
+            and vehicles > 0
         group by 
-            messung_id
-            ,address
-            ,ort
+            site_id
+            ,concat(street, ' ', house_number, ', ', location)
             ,start_date
             ,end_date
             ,zone
@@ -60,8 +58,9 @@ qry = {
             ,longitude
             ,EXTRACT(year from start_date)
             """,
+
     "all_violations":"""select 
-            t2.messung_id
+            t1.station_id
             ,t2.start_date
             ,t2.end_date
             ,t2.latitude
@@ -69,14 +68,14 @@ qry = {
             ,t1.date_time
             ,t1.velocity_kmph
             ,t2.address
-            ,t2.ort 
+            ,t2.location 
             ,t2.zone 
-            ,t2.richtung
-            ,t2.richtung_strasse
+            ,t2.direction
+            ,t2.direction_street
             ,t2.v50
             ,t2.v85
-            ,t2.fahrzeuge
-            ,t2.uebertretungsquote
+            ,t2.vehicles
+            ,t2.exceedance_rate
         from 
             velocity t1 
             inner join station t2 on t2.id = t1.station_id
@@ -84,32 +83,34 @@ qry = {
     "velocity_by_station": "select * from v_velocity_by_station",
 
     "station_velocities": """select 
-        messung_id
+        site_id
         , station_id
         , date_trunc('hour',date_time) as date_time
         , TO_CHAR(date_time, 'HH24')::INT as hour
+        , EXTRACT(dow  FROM date_time) as dow
         , count(*) as count
         , max(velocity_kmph) as max_velocity
         , max(exceedance_kmph) as max_exceedance 
     from 
-        velocity where messung_id = {}
+        velocity where site_id = {}
     group by 
-        messung_id
+        site_id
         , station_id
         , date_trunc('hour',date_time)
-        , TO_CHAR(date_time, 'HH24')::INT""",
-    
+        , TO_CHAR(date_time, 'HH24')::INT
+        , EXTRACT(dow  FROM date_time)""",
+
     "station_velocities_by_hour":"""select 
-        messung_id
+        site_id
         , station_id
         , TO_CHAR(date_time, 'HH24')::INT as hour
         , count(*) as count
-        , max(velocity_kmph) as max_velocity
+        , max(velocity_kmph) as max_velocitystation_velocities
         , max(exceedance_kmph) as max_exceedance 
     from 
         velocity where station_id = {}
     group by 
-            messung_id
+            site_id
         , station_id
         , TO_CHAR(date_time, 'HH24')::INT""",
     "exceedance_count": "select count(*) as count from velocity where exceedance_kmph > 0;",
@@ -152,6 +153,7 @@ qry = {
         SELECT 
             station_id 
             ,EXTRACT(HOUR FROM date_time) as hour
+            ,EXTRACT(DOW FROM date_time) as dow
             ,t2.address
             ,count(*) as count
             ,avg(velocity_kmph) as avg_velocity
@@ -163,6 +165,7 @@ qry = {
             station_id 
             ,t2.address
             ,EXTRACT(HOUR FROM date_time)
+            , EXTRACT(DOW FROM date_time)
         """
 }
 

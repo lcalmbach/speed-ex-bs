@@ -7,14 +7,15 @@ import app_heatmap
 import requests
 import const as cn
 import json
-import sqlite3
+import locale
+
 from queries import qry
 import database as db
 
-__version__ = '0.0.13'
+__version__ = '0.0.14'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-22'
+VERSION_DATE = '2021-10-23'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets6.lottiefiles.com/packages/lf20_useqtj8t.json'
@@ -44,6 +45,7 @@ def get_texts():
     return t
     
 def main():
+    locale.setlocale(locale.LC_ALL, 'deu_CH')
     st.set_page_config(
         page_title=my_name,
         layout="wide")
@@ -53,11 +55,11 @@ def main():
         with st.sidebar:
             st_lottie(lottie_search_names, height=80, loop=True)
 
-    st.sidebar.markdown(f"### {my_name}<br>🚧 in Arbeit",unsafe_allow_html=True)
+    st.sidebar.markdown(f"### {my_name}",unsafe_allow_html=True)
 
     texts = get_texts()
     conn = db.get_pg_connection()
-    menu = ['Info','Karte','Boxplot','Statistik']
+    menu = ['Info','Karte','Statistik']
     menu_action = st.sidebar.selectbox('Menu',menu)
     
     if menu_action == menu[0]:
@@ -65,8 +67,6 @@ def main():
     elif menu_action == menu[1]:
         app_map.show_menu(texts['app_map'], conn)
     elif menu_action == menu[2]:
-        app_heatmap.show_menu(texts['app_boxplot'], conn)
-    elif menu_action == menu[3]:
         app_stats.show_menu(texts['app_stats'], conn)
     st.sidebar.markdown(APP_INFO, unsafe_allow_html=True)
 

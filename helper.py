@@ -7,18 +7,24 @@ def set_column_types(df:pd.DataFrame)->pd.DataFrame:
         df['latitude']=df['latitude'].astype('float')
         df['longitude']=df['longitude'].astype('float')
     if 'start_date' in df.columns:
+        print('yes')
         df['start_date'] = pd.to_datetime(df['start_date'])
         df['end_date'] = pd.to_datetime(df['end_date'])
+    if 'direction_street' in df.columns:
+        df['direction_street']=df['direction_street'].astype('str')
     return df
 
-def format_time_columns(df:pd.DataFrame, cols: tuple, fmt):
+def format_time_columns(df:pd.DataFrame, cols: tuple, fmt): 
+    print (cols)
     for col in cols:
         df[col].apply(lambda x: x.strftime(fmt))
+        print(fmt)
     return df
 
 def add_calculated_fields(df):
     df = set_column_types(df)
     df = format_time_columns(df, ('start_date', 'end_date'), cn.FORMAT_DMY)
+    print(df.columns)
     df['diff_v50'] = ( df['v50'] - df['zone']) 
     df['diff_v85'] = ( df['v85'] - df['zone']) 
     df['diff_v50_perc'] = df['diff_v50'] / 100
@@ -51,15 +57,15 @@ def replace_day_ids(df, col):
     return df.replace({col: week_dic})
 
 def add_leading_zeros(df, col,len):
-        """convert the month column
+    """convert the month column
 
-        Args:
-            df ([type]): [description]
+    Args:
+        df ([type]): [description]
 
-        Returns:
-            [type]: [description]
-        """
-        df[col] = df[col].astype(int)
-        df[col] = df[col].astype(str)
-        df[col]  = df[col].astype(str).str.zfill(len)
-        return df
+    Returns:
+        [type]: [description]
+    """
+    df[col] = df[col].astype(int)
+    df[col] = df[col].astype(str)
+    df[col]  = df[col].astype(str).str.zfill(len)
+    return df

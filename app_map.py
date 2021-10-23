@@ -13,7 +13,7 @@ import const as cn
 import database as db
 import helper
 
-lst_group_fields = ['uebertretungsquote', 'diff_v50_perc', 'diff_v85_perc', 'fahrzeuge']
+lst_group_fields = ['exceedance_rate', 'diff_v50_perc', 'diff_v85_perc', 'vehicles']
 
 
 def plot_map(df: pd.DataFrame, settings: object):
@@ -26,7 +26,6 @@ def plot_map(df: pd.DataFrame, settings: object):
     :param df: dataframe with data to be plotted
     :return:
     """
-
     if df.shape[0] > 0:
         if settings['layer_type'] == 'ColumnLayer':
             layer = pdk.Layer(
@@ -104,8 +103,8 @@ def show_summary(conn, texts):
     def get_tooltip_html()->str:
 
         text = """
-            <b>Messung-id:</b> {messung_id}<br/>           
-            <b>Adresse:</b> {address}<br/>
+            <b>Messung-id:</b> {site_id}<br/>           
+            <b>Adresse:</b> {location}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
             <b>Messende:</b> {end_date}<br/>
             <b>Zone:</b> {zone}<br/>  
@@ -116,13 +115,13 @@ def show_summary(conn, texts):
 
     def get_filter_expression():
         if (zone != '<alle>') & (year  != '<alle>'):
-            return f"die Messstandorte für Geschwindikeitesmessungen im Jahr {year} in der Zone {zone}"
+            return f"die Messstandorte für Geschwindigkeitsmessungen im Jahr {year} in der Zone {zone}"
         elif (zone != '<alle>'):
-            return f"die Messstandorte für Geschwindikeitesmessungen in den Jahren {min_year} bis {max_year} in der Zone {zone}"
+            return f"die Messstandorte für Geschwindigkeitsmessungen in den Jahren {min_year} bis {max_year} in der Zone {zone}"
         elif (year  != '<alle>'):
-            return f"die Messstandorte für Geschwindikeitesmessungen im Jahr {year} in allen Zonen"
+            return f"die Messstandorte für Geschwindigkeitsmessungen im Jahr {year} in allen Zonen"
         else:
-            return f"die Messstandorte für Geschwindikeitesmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
+            return f"die Messstandorte für Geschwindigkeitsmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
 
         
 
@@ -136,8 +135,8 @@ def show_summary(conn, texts):
     zone = st.sidebar.selectbox("Wähle eine Zone", lst_zones)
     year = st.sidebar.selectbox("Wähle ein Jahr", lst_years)
     df_filtered = df.query('jahr == @year') if year != all_expression else df
-    df_filtered = df.query('zone == @zone') if zone != all_expression else df_filtered
-    df_filtered = df_filtered[['longitude','latitude','messung_id', 'address','zone','start_date','end_date']]
+    df_filtered = df_filtered.query('zone == @zone') if zone != all_expression else df_filtered
+    df_filtered = df_filtered[['longitude','latitude','site_id', 'location','zone','start_date','end_date']]
     
     df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
     df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
@@ -172,17 +171,30 @@ def plot_linechart(df,settings):
     return chart
 
 @st.experimental_memo()   
+def get_location_list(df:pd.DataFrame)->list:
+    """
+    the stations must be ranked again, since the original dataframe is aggregated by direction, so each station
+    can appear twice with a different ranking. therefore the df has to be aggregated without direction, then ranked again.
+    """
+    groupby_fields_fields = ['site_id', 'location']
+    df = df.groupby(groupby_fields_fields)['exceedance_rate'].agg(['mean']).reset_index()
+    df = df.sort_values(by = 'location')
+    ids = list(df['site_id'])
+    vals = list(df['location'])
+    return dict(zip(ids, vals))
+
+@st.experimental_memo()   
 def get_station_list(df:pd.DataFrame)->list:
     """
     the stations must be ranked again, since the original dataframe is aggregated by direction, so each station
     can appear twice with a different ranking. therefore the df has to be aggregated without direction, then ranked again.
     """
-    groupby_fields_fields = ['messung_id', 'address','ort']
-    df = df.groupby(groupby_fields_fields)['uebertretungsquote'].agg(['mean']).reset_index()
+    groupby_fields_fields = ['site_id', 'location']
+    df = df.groupby(groupby_fields_fields)['exceedance_rate'].agg(['mean']).reset_index()
     df['rang'] = df['mean'].rank(method='min').astype('int')
     df = df.sort_values('rang', ascending=False)
-    ids = list(df['messung_id'])
-    vals = list(df['rang'].astype('string') + ') ' + df['address'] + ' ' + df['ort']) 
+    ids = list(df['site_id'])
+    vals = list(df['rang'].astype('string') + ') ' + df['location']) 
     return dict(zip(ids, vals))
 
 
@@ -220,14 +232,14 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
 
     def get_tooltip_html():
         return """
-            <b>Messung-id:</b> {messung_id}<br/>
+            <b>Messung-id:</b> {site_id}<br/>
             <b>Länge:</b> {longitude}<br/>
             <b>Breite:</b> {latitude}<br/>
-            <b>Adresse:</b> {address}<br/>
-            <b>Richtung:</b> {richtung_strasse}<br/>
+            <b>Adresse:</b> {location}<br/>
+            <b>Richtung:</b> {direction_street}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
             <b>Messende:</b> {end_date}<br/>
-            <b>Übertretungsquote:</b> {uebertretungsquote}<br/>
+            <b>Übertretungsquote:</b> {exceedance_rate}<br/>
             <b>Zone:</b> {zone}<br/>  
             <b>V50:</b> {v50}<br/>
             <b>V85:</b> {v85}<br/>
@@ -248,12 +260,11 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
     @st.experimental_memo()          
     def prepare_map_data(_conn, settings):
         def add_calculated_fields(df):
-            df['date_time'] = pd.to_datetime(df['date_time'], format="%d.%m.%y %H:%M:%S")
             df['latitude']=df['latitude'].astype('float')
             df['longitude']=df['longitude'].astype('float')
             df['woche'] = df['date_time'].dt.isocalendar().week
             df['jahr'] = df['date_time'].dt.year      
-            groupby_fields_fields = ['messung_id', 'richtung','richtung_strasse','jahr','woche','zone','latitude','longitude','v50','v85','fahrzeuge','uebertretungsquote','messbeginn','messende']
+            groupby_fields_fields = ['site_id', 'direction','direction_street','jahr','woche','zone','latitude','longitude','v50','v85','vehicles','exceedance_rate','messbeginn','messende']
             df = df.groupby(groupby_fields_fields)['velocity'].agg(['max','count']).reset_index()
             df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
@@ -274,6 +285,7 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
 
         return df, ok        
     
+
     def init_settings():
         settings = {'layer_type':'ScatterplotLayer', 
         'tooltip_html':get_tooltip_html(), 
@@ -301,7 +313,7 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
     time = slider_placeholder.select_slider('Wähle Woche und Jahr', options=list(df_year_week.index))
     week = df_year_week.loc[time]['woche']
     year = df_year_week.loc[time]['jahr']
-    df_filtered = df.query(f"(woche == @week) & (jahr == @year) & (richtung == {settings['direction']})")
+    df_filtered = df.query(f"(woche == @week) & (jahr == @year) & (direction == {settings['direction']})")
     df_filtered = get_radius(df_filtered, settings)
     df_filtered = get_colors(df_filtered, settings)
 
@@ -313,12 +325,13 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
 
 
 def show_ranking(conn):
-    def explain(df_filtered,settingsm, rank):
+    def explain(df_filtered,settingsm, ranks):
         if len(df_filtered) > 0:
             dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {rank[0]} bis {rank[-1]}. Die Rangliste erfolgt nach Parameter *{settings['rank_param']}*. 
-*{settings['rank_param']}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Rang 1 entspricht 
-der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*. Du findest die Definition aller Parameter auf der Infoseite. 
+            par = cn.PARAMETERS_DIC[settings['rank_param']]['label']
+            return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {ranks[0]} bis {ranks[-1]}. Die Rangliste erfolgt nach Parameter *{par}*. 
+*{par}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Rang 1 entspricht 
+der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Definition aller Parameter auf der Infoseite. 
             """
         else:
             return ''
@@ -337,12 +350,11 @@ der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*.
             
             df = helper.set_column_types(df)
             df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
-            df = df.rename(columns = {'max': 'max_velocity', 'count':'anz'})
+            # df = df.rename(columns = {'max': 'max_velocity'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
             df['diff_v50_perc'] = df['diff_v50'] / 100
             df['diff_v85_perc'] = df['diff_v85'] / df['zone'] * 100
-
             return df
 
         df, ok, err_msg = db.execute_query(qry['velocity_by_station'], _conn)     
@@ -351,13 +363,12 @@ der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*.
 
     def get_tooltip_html():
         return """
-            <b>Messung-id:</b> {messung_id}<br/>
-            
+            <b>Messung-id:</b> {site_id}<br/>
             <b>Adresse:</b> {address}<br/>
-            <b>Richtung:</b> {richtung_strasse}<br/>
+            <b>Richtung:</b> {direction_street}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
             <b>Messende:</b> {end_date}<br/>
-            <b>Übertretungsquote:</b> {uebertretungsquote}<br/>
+            <b>Übertretungsquote:</b> {exceedance_rate}<br/>
             <b>Zone:</b> {zone}<br/>  
             <b>V50:</b> {v50}<br/>
             <b>V85:</b> {v85}<br/>
@@ -381,28 +392,36 @@ der Messstation mit dem tiefsten Wert für Parameter *{settings['rank_param']}*.
 
         settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_group_fields)
         return settings
-    
+
+    def get_title(df,settings, ranks):
+        par = cn.PARAMETERS_DIC[settings['rank_param']]['label']
+        text = f"#### Messstationen nach {par}, Ränge {ranks[0]} bis {ranks[1]}" 
+        return text
+
     # start
     settings = init_settings()
     df_station, ok = prepare_map_data(conn, settings)
+    df_station = helper.set_column_types(df_station)
+    df_station = helper.format_time_columns(df_station, ('start_date', 'end_date'), cn.FORMAT_DMY)
     df_station['rang'] = df_station[settings['rank_param']].rank(method='min').astype('int')
     df_station = df_station.sort_values('rang')
-
+    print(df_station.dtypes)
     settings['midpoint'] = (np.average(df_station['latitude']), np.average(df_station['longitude']))
     max_rank = int(df_station['rang'].max())
-    rank = st.sidebar.slider('Rang', 1,max_rank,(1,10))
-    df_filtered = df_station.query(f"(rang >= @rank[0]) & (rang <= @rank[1])")
+    ranks = st.sidebar.slider('Rang', 1,max_rank,(1,10))
+    df_filtered = df_station.query(f"(rang >= @ranks[0]) & (rang <= @ranks[1])")
     if len(df_filtered) > 0:
+        st.markdown(get_title(df_filtered, settings, ranks),unsafe_allow_html=True)
         chart = plot_map(df_filtered, settings)
         st.pydeck_chart(chart)
-        st.markdown(explain(df_filtered,settings,rank),unsafe_allow_html=True)
+        st.markdown(explain(df_filtered,settings,ranks),unsafe_allow_html=True)
 
 
 def show_station_analysis(conn):
     def explain(df_filtered,settings):
         if len(df_filtered) == 1:
             dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position von Messtation {dic['messung_id']} mit Rang {dic['rang']} Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
+            return f"""Die Karte zeigt die Position von Messtation {dic['site_id']} mit Rang {dic['rang']} Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
 Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
             """
         else:
@@ -410,21 +429,17 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
     @st.experimental_memo(suppress_st_warning=True)   
     def prepare_map_data(_conn):
-        df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
+        sql = qry['all_stations']
+        df, ok, err_msg = db.execute_query(sql, _conn)
         df = helper.add_calculated_fields(df)
         df = helper.set_column_types(df)
         df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
         return df, ok     
 
-    def get_velocity_data(messung_id, _conn):
-        sql = qry['station_velocities'].format(messung_id)
+    def get_velocity_data(site_id, _conn):
+        sql = qry['station_velocities'].format(site_id)
         df, ok, err_msg = db.execute_query(sql, _conn)
-        return df, ok     
-
-    def get_velocity_hour_data(messung_id, _conn):
-        sql = qry['station_velocities_by_hour'].format(messung_id)
-        df, ok, err_msg = db.execute_query(sql, _conn)
-        return df, ok        
+        return df, ok           
 
     def get_tooltip_html():
         return ""
@@ -434,7 +449,6 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
         'tooltip_html':get_tooltip_html(), 
         }
 
-        settings['rank_param'] = st.sidebar.selectbox('Wähle Parameter für die Rangliste', lst_group_fields)
         settings['width'] = 400
         settings['height'] = 400
         
@@ -442,56 +456,59 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
 
     def show_plots(df_velocities, dic_station):
         if len(df_velocities) > 0:
-            settings['x'] = alt.X("date_time:T")
-            settings['y'] = alt.Y("count:Q")
+            settings['x'] = alt.X("date_time:T", axis=alt.Axis(title='', format = ("%d.%m %y")))
+            settings['y'] = alt.Y("count:Q", axis=alt.Axis(title='Übertretungen/h'))
             #station_id = dic_station['id']
-            st.write(f"Richtung {dic_station['richtung']}, {dic_station['richtung_strasse']}")
-            st.write('Zeitlicher Verlauf, Anzahl Geschwindikeitsüberschreitungen (pro Stunde)')
+            st.write(f"Richtung {dic_station['direction']}")
+            st.write('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen (pro Stunde)')
             chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
             
-            st.write('Anzahl Geschwindikeitsüberschreitungen aggregiert nach Tageszeit über Messperiode')
-            settings['x'] = alt.X("hour:O")
-            settings['y'] = alt.Y("count:Q")
+            st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Tageszeit')
+            settings['x'] = alt.X("hour:O", axis=alt.Axis(title=cn.PARAMETERS_DIC['hour']['label']))
+            settings['y'] = alt.Y("count:Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
+            chart = plot_barchart(df_velocities,settings)
+            st.altair_chart(chart)
+
+            df_velocities = helper.replace_day_ids(df_velocities, 'dow')
+            st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Wochentag')
+            settings['x'] = alt.X("dow:O", axis=alt.Axis(title=''), sort=cn.WOCHE)
+            settings['y'] = alt.Y("count:Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
             chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
         else:
-            st.write(f"keine Daten für Richtung {dic_station['richtung']}")
+            st.write(f"keine Daten für Richtung {dic_station['direction']}")
 
     def get_station_title(df_station):
         x = df_station.iloc[0].to_dict()
-        return f"### Messtation {x['messung_id']} {x['address']}, von {x['start_date'].strftime(cn.FORMAT_DMY)} bis {x['end_date'].strftime(cn.FORMAT_DMY)}"
+        return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date'].strftime(cn.FORMAT_DMY)} bis {x['end_date'].strftime(cn.FORMAT_DMY)}"
     
+    title_placeholder = st.empty()
     settings = init_settings()
     df_stations, ok = prepare_map_data(conn)
-    # st.write(df.head())
-    df_stations['rang'] = df_stations[settings['rank_param']].rank(method='min').astype('int')
-
-    station_dic =  get_station_list(df_stations)
-    messung_id = st.sidebar.selectbox('Wähle Messstation', list(station_dic.keys()),
-        format_func=lambda x: station_dic[x])   
+    location_dic =  get_location_list(df_stations)
+    site_id = st.selectbox('Wähle Messstation', list(location_dic.keys()),
+        format_func=lambda x: location_dic[x])   
     settings['midpoint'] = (np.average(df_stations['latitude']), np.average(df_stations['longitude']))
-    df_station = df_stations.query('messung_id == @messung_id')
-    df_velocities, ok = get_velocity_data(messung_id, conn)
+    df_station = df_stations.query('site_id == @site_id')
+    df_velocities, ok = get_velocity_data(site_id, conn)
 
-    st.markdown(get_station_title(df_station))
+    title_placeholder.markdown(get_station_title(df_station))
     if len(df_station) > 0:
         chart = plot_map(df_station, settings)
         st.pydeck_chart(chart)
-        sql =  qry['station_velocities'].format(messung_id)
-        df_velocities, ok, err_msg = db.execute_query(sql, conn)
         col1, col2 = st.columns(2)
         with col1:
-            dic_station = df_station.query('(messung_id == @messung_id) & (richtung == 1)')
+            dic_station = df_station.query('(site_id == @site_id) & (direction == 1)')
             if len(dic_station) > 0:
                 dic_station = dic_station.iloc[0].to_dict()
-                df_filtered = df_velocities.query(f"station_id == {dic_station['id']}")
+                df_filtered = df_velocities.query(f"station_id == {dic_station['station_id']}")
                 show_plots(df_filtered, dic_station)
         with col2:
-            dic_station = df_station.query('(messung_id == @messung_id) & (richtung == 2)')
+            dic_station = df_station.query('(site_id == @site_id) & (direction == 2)')
             if len(dic_station)>0:
                 dic_station = dic_station.iloc[0].to_dict()
-                df_filtered = df_velocities.query(f"station_id == {dic_station['id']}")
+                df_filtered = df_velocities.query(f"station_id == {dic_station['station_id']}")
                 show_plots(df_velocities, dic_station)
                 
         st.markdown(explain(df_station,settings),unsafe_allow_html=True)

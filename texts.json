@@ -5,10 +5,15 @@
         "parameters": "Folgende Parameter definieren die Messstellen, werden gemessen, oder basierend auf den gemessenen Werten berechnet:\n\n- **Strasse, Hausnummer, Ort**: Adresse der Messstelle\n\n- **Länge/Breite**: geographische Koordinaten in Dezimalgradenn\n\n- **Richtung**: Bei den meisten Messorten wird in 2 Richtungen gemessen. Auf der Karte können in der Regel nur eine Richtung angezeigt werden, weshalb man in der Kartenansicht zwischen den beiden Richtungen wechseln muss.\n\n- **Messbeginn/Messende**: zeitliches Intervall in dem gemessesn wurde\n\n- **Zone**: Höchstgeschwindigkeit am Messort\n\n- **Übertretungsquote**:Anzahl Geschwindigkeits-Übertretungen / Anzahl der passierten Fahrzeuge * 100\n\n- **Anzahl Fahrzeuge**: Anzahl der passierten Fahrzeuge.\n\n- **V50/V85**: Geschwindigkeit, welche von 50% resp. 85% der Fahrzeuge eingehalten wurde\n\n\nZusätzliche berechnete Parameter, die nicht in den Originaldaten enthalten sind:\n\n- **diff_v50, diff_v85**: Differenz der Geschwindigkeit, welche von 50% resp. 85% der Fahrzeuge eingehalten wurde zur Höchstgeschwindigkeit am Messort. Ein negativer Wert bedeutet, dass 50% resp. 85% der Fahrzeuge innerhalb der erlaubten Limite gefahren sind. Dieser Parameter erlaubt es besser, Vergleiche über verschiedene Geschwindigkeitszonen anzustellen, denn ob ein Tempo von 51 km/h in einer 30er oder 50er Zone auftritt ist natürlich nicht dasselbe und diese Geschwindigkeit muss auf der Karten anders dargestellt werden können.\n\n- **diff_v50_perc, diff_v85_perc**: berechnet die prozentuale Abweichung von v50 und v85, da auch die Geschwindigkeitsübertretungen unter verschiedenen Zonen nicht direkt vergleichbar ist. So bedeutet eine Übertretung von 10 km/h in einer 20 Zone eine Verdoppelung der erlaubten Geschwindigkeit, in einer 50er Zone jedoch eine Übertretung von 20%, die gleiche Geschwindigkeitsübertretung ist daher nicht gleich zu werten."
     },
     "app_map":{
-        "instructions": "Die Karte zeigt {}. Wenn du mit dem Mauszeiger über die Standorte fährst, so werden die Details zum Standort angezeigt. Du kannst die Standorte in der Navigationsleiste nach Jahr und Zone filtern.",
+        "instructions": "Die Karte zeigt {}. Wenn du mit dem Mauszeiger über die Standorte fährst, so werden die Details zum Standort angezeigt. Durch Betätigen des Mouse-Scrollrad kann der Kartenauschnitt verkleinert oder vergrössert werden. Du kannst die Standorte in der Navigationsleiste nach Jahr und Zone filtern.",
         "menu_options": ["Übersicht", "Ranglisten", "Messstation Analyse"]
     },
-    "app_stats":{},
-    "app_boxplot":{}
+    "app_stats":{
+        "instructions_summary":"Diese Tabelle zeigt die Kennzahlen aller Messstationen und über den gesamten Zeitraum, in dem Daten zur Verfügung stehen. Die maximale Übertretungsquote von {}% wurde gemessen bei Messtation {} ({} - {}). Die *Mittlere Übertretungsquote (Stationen)* wird berechnet als Mittelwert der Mittelwerte aller Stationen. Es wird jede Station gleich gewichtet unabhängig von der Zahl der zirkulierenden Fahrzeugen. Die *Übertertungsquote (Alle Messungen)* wird berechnet als Anzahl aller Überschreitungen dividiert durch alle Fahrzeuge.",
+        "station_analysis":"Diese Tabelle enthält {}. *{}* ist die Messstation wo die höchste Übertretungsquote ({}) gemessen wurde. Bei Messstation *{}* zirkulierten die meisten Fahrzeuge ({})"
+    },
+    "app_boxplot":{
+
+    }
 }
 
