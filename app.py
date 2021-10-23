@@ -7,7 +7,7 @@ import app_heatmap
 import requests
 import const as cn
 import json
-import locale
+#import locale
 
 from queries import qry
 import database as db
@@ -45,7 +45,7 @@ def get_texts():
     return t
     
 def main():
-    locale.setlocale(locale.LC_ALL, 'de_DE')
+    #locale.setlocale(locale.LC_ALL, 'de_DE')
     st.set_page_config(
         page_title=my_name,
         layout="wide")
