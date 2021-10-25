@@ -12,10 +12,10 @@ import json
 from queries import qry
 import database as db
 
-__version__ = '0.0.14'
+__version__ = '0.0.15'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
-VERSION_DATE = '2021-10-23'
+VERSION_DATE = '2021-10-25'
 my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
 
 LOTTIE_URL = 'https://assets6.lottiefiles.com/packages/lf20_useqtj8t.json'
