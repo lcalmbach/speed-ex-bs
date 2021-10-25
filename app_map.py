@@ -108,8 +108,6 @@ def show_summary(conn, texts):
             <b>Messbeginn:</b> {start_date}<br/>
             <b>Messende:</b> {end_date}<br/>
             <b>Zone:</b> {zone}<br/>  
-            <b>Länge:</b> {longitude}<br/>
-            <b>Breite:</b> {latitude}<br/>
         """
         return text
 
@@ -233,8 +231,6 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
     def get_tooltip_html():
         return """
             <b>Messung-id:</b> {site_id}<br/>
-            <b>Länge:</b> {longitude}<br/>
-            <b>Breite:</b> {latitude}<br/>
             <b>Adresse:</b> {location}<br/>
             <b>Richtung:</b> {direction_street}<br/>
             <b>Messbeginn:</b> {start_date}<br/>
@@ -329,8 +325,11 @@ def show_ranking(conn):
         if len(df_filtered) > 0:
             dic = df_filtered.iloc[0].to_dict()
             par = cn.PARAMETERS_DIC[settings['rank_param']]['label']
+            val_from = df_filtered.iloc[0][settings['rank_param']]
+            val_to = df_filtered.iloc[-1][settings['rank_param']]
+            unit = cn.PARAMETERS_DIC[settings['rank_param']]['unit']
             return f"""Die Karte zeigt die Position aller Messstationen mit den Rängen {ranks[0]} bis {ranks[-1]}. Die Rangliste erfolgt nach Parameter *{par}*. 
-*{par}* variiert in der Rangauswahl von {df_filtered.iloc[0][settings['rank_param']]} bis {df_filtered.iloc[-1][settings['rank_param']]}. Rang 1 entspricht 
+Dieser variiert in der Rangauswahl von {val_from:.1f} bis {val_to:.1f}{unit}. Rang 1 entspricht 
 der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Definition aller Parameter auf der Infoseite. 
             """
         else:
@@ -376,8 +375,6 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
             <b>V85 - Zone:</b> {diff_v85}<br/>
             <b>V50 - Zone%:</b> {diff_v50_perc}<br/>
             <b>V85 - Zone%:</b> {diff_v85_perc}<br/>
-            <b>Länge:</b> {longitude}<br/>
-            <b>Breite:</b> {latitude}<br/>
         """
 
     def init_settings():
@@ -395,7 +392,7 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
 
     def get_title(df,settings, ranks):
         par = cn.PARAMETERS_DIC[settings['rank_param']]['label']
-        text = f"#### Messstationen nach {par}, Ränge {ranks[0]} bis {ranks[1]}" 
+        text = f"#### Messstationen geordnet nach Parameter *{par}*\n Ränge {ranks[0]} bis {ranks[1]}" 
         return text
 
     # start
@@ -418,15 +415,6 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
 
 
 def show_station_analysis(conn):
-    def explain(df_filtered,settings):
-        if len(df_filtered) == 1:
-            dic = df_filtered.iloc[0].to_dict()
-            return f"""Die Karte zeigt die Position von Messtation {dic['site_id']} mit Rang {dic['rang']} Die Rangliste erfolgt nach Parameter {settings['rank_param']}. 
-Die Definition des Parameters *{settings['rank_param']}* findest du auf der Infoseite. 
-            """
-        else:
-            return ''
-
     @st.experimental_memo(suppress_st_warning=True)   
     def prepare_map_data(_conn):
         sql = qry['all_stations']
@@ -510,8 +498,6 @@ Die Definition des Parameters *{settings['rank_param']}* findest du auf der Info
                 dic_station = dic_station.iloc[0].to_dict()
                 df_filtered = df_velocities.query(f"station_id == {dic_station['station_id']}")
                 show_plots(df_velocities, dic_station)
-                
-        st.markdown(explain(df_station,settings),unsafe_allow_html=True)
 
 def show_menu(texts, conn):    
     menu_item = st.sidebar.selectbox('Optionen', texts['menu_options'])

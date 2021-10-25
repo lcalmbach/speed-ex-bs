@@ -22,6 +22,10 @@ PARAMETERS_DIC = {
     'count_exc': {'label': 'Anzahl Übertretungen', 'unit': '', 'type': 'int'},  
     'latitude': {'label': 'Länge', 'unit': '', 'type': 'float'},  
     'longitude': {'label': 'Breite', 'unit': '', 'type': 'float'},  
+    'diff_v50': {'label': 'Diff-V50', 'unit': '', 'type': 'float'},  
+    'diff_v85': {'label': 'Diff-V85', 'unit': '', 'type': 'float'},  
+    'diff_v50_perc': {'label': 'Diff-V50%', 'unit': '%', 'type': 'float'},  
+    'diff_v85_perc': {'label': 'Diff-V50%', 'unit': '%', 'type': 'float'},  
 }
 # files
 TEXTS = './texts.json'
@@ -54,3 +58,4 @@ else:
 
 FORMAT_DMY = '%d.%m.%Y'
 WOCHE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+WEEKDAY4ID = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag']

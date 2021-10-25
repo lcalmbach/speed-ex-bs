@@ -51,12 +51,12 @@ def get_locations(_conn):
     Returns:
         [pd.DataFrame]: table of locations
     """
-    statfields =['messung_id','address','ort','start_date','end_date','zone','richtung_strasse','fahrzeuge','uebertretungsquote','v50','v85']
+    statfields =['site_id','location','start_date','end_date','zone','direction_street','vehicles','exceedance_rate','v50','v85']
     df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
     df = helper.format_time_columns(df,('start_date','end_date'),cn.FORMAT_DMY)
-    df['address'] = df['address'].astype(str)
-    df['richtung_strasse'] = df['richtung_strasse'].astype(str)
-    df['fahrzeuge'] = df['fahrzeuge'].astype(int)
+    df['location'] = df['location'].astype(str)
+    df['direction_street'] = df['direction_street'].astype(str)
+    df['vehicles'] = df['vehicles'].astype(int)
     df['v50'] = df['v50'].astype(int)
     df['v85'] = df['v85'].astype(int)
     df = df[statfields]
@@ -65,11 +65,11 @@ def get_locations(_conn):
 
 @st.experimental_memo()     
 def get_stations(_conn):
-    statfields =['station_id','messung_id','address','ort','start_date','end_date','zone','richtung_strasse','richtung','fahrzeuge','uebertretungsquote','v50','v85']
+    statfields =['station_id','site_id','location','start_date','end_date','zone','direction_street','direction','vehicles','exceedance_rate','v50','v85']
     df, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
-    df['address'] = df['address'].astype(str)
-    df['richtung_strasse'] = df['richtung_strasse'].astype(str)
-    df['fahrzeuge'] = df['fahrzeuge'].astype(int)
+    df['location'] = df['location'].astype(str)
+    df['direction_street'] = df['direction_street'].astype(str)
+    df['vehicles'] = df['vehicles'].astype(int)
     df['v50'] = df['v50'].astype(int)
     df['v85'] = df['v85'].astype(int)
     df = df[statfields]
@@ -80,14 +80,13 @@ def get_lst_ort(stations):
 
 @st.experimental_memo() 
 def get_dic_stations(stations): 
-    stations['value'] = stations["address"].str.cat([stations['ort'], stations['richtung_strasse']], sep=", ")
+    stations['value'] = stations["location"].str.cat([stations['location'], stations['direction_street']], sep=", ")
     stations = stations.sort_values('value')
     return dict(zip(stations['station_id'], stations['value']))
 
 @st.experimental_memo() 
 def get_dic_locations(locations): 
-    locations['value'] = locations["address"].str.cat(locations['ort'], sep=", ")
-    #stations = stations.sort_values('value')
+    locations['value'] = locations["location"].str.cat(locations['location'], sep=", ")
     return dict(zip(locations['station_id'], locations['value']))
 
 def append_row(df, par, value, fmt):
@@ -119,32 +118,32 @@ def summary_all(conn, texts):
     df_table = pd.DataFrame(columns=['Parameter', 'Wert'])
     vals['exceedance_count'] = get_violation_count(conn)
     stations = get_stations(conn)
-    x = len(stations['messung_id'].unique())
-    vals['station_count'] = len(pd.unique(stations[['messung_id', 'richtung']].values.ravel()))
+    x = len(stations['site_id'].unique())
+    vals['station_count'] = len(pd.unique(stations[['site_id', 'direction']].values.ravel()))
     vals['dir_count'] = len(stations)
     vals['start_date'] = stations['start_date'].min()
     vals['end_date'] = stations['end_date'].max()
-    vals['vehicles']=int(stations['fahrzeuge'].sum())
-    vals['exceedance_quote_stations']=stations['uebertretungsquote'].mean()/100
-    vals['exeedance_quote_max']=stations['uebertretungsquote'].max()/100
-    vals['exeedance_quote_max_location']=stations.query(f"uebertretungsquote=={stations['uebertretungsquote'].max()}")
-    vals['exeedance_quote_max_location'] = vals['exeedance_quote_max_location'].iloc[0]['address'] + ',' + vals['exeedance_quote_max_location'].iloc[0]['ort']
+    vals['vehicles']=int(stations['vehicles'].sum())
+    vals['exceedance_quote_stations']=stations['exceedance_rate'].mean()/100
+    vals['exeedance_quote_max']=stations['exceedance_rate'].max()/100
+    vals['exeedance_quote_max_location']=stations.query(f"exceedance_rate=={stations['exceedance_rate'].max()}")
+    vals['exeedance_quote_max_location'] = vals['exeedance_quote_max_location'].iloc[0]['location'] + ',' + vals['exeedance_quote_max_location'].iloc[0]['location']
     vals['exceedance_quote_all']= vals['exceedance_count'] / vals['vehicles'] if vals['exceedance_count'] > 0 else 0
 
-    groupby_fields = ['messung_id', 'ort','address','start_date','end_date']
+    groupby_fields = ['site_id', 'location','start_date','end_date']
     df_table = append_row(df_table, 'Anzahl Messstationen', vals['station_count'], f_int)
     df_table = append_row(df_table,'Anzahl Richtungen',vals['dir_count'], f_int)
     df_table = append_row(df_table,'Erste Messung',vals['start_date'], f_dat)
     df_table = append_row(df_table,'Letzte Messung',stations['end_date'].max(), f_dat)
 
-    df_time = stations.groupby(groupby_fields)['fahrzeuge'].agg(['sum']).reset_index()
+    df_time = stations.groupby(groupby_fields)['vehicles'].agg(['sum']).reset_index()
     df_time['num_of_days'] = (df_time['end_date'] - df_time['start_date']).astype('timedelta64[h]') / 24
     vals['num_of_days']=df_time['num_of_days'].sum()
     df_table = append_row(df_table,'Anzahl Tage total',vals['num_of_days'],f_int)
     vals['avg_num_days']=df_time['num_of_days'].mean()
     df_table = append_row(df_table,'Mittlere Anzahl Tage pro Messstation',vals['avg_num_days'],f_dec)
     
-    df_table = append_row(df_table,'Anzahl Fahrzeuge',vals['vehicles'],",d")
+    df_table = append_row(df_table,'Anzahl Vehicles',vals['vehicles'],",d")
     df_table = append_row(df_table,'Anzahl Übertretungen',vals['exceedance_count'],",d")
     df_table = append_row(df_table,'Max. Übertretungsquote', vals['exeedance_quote_max'],f_pct)
     df_table = append_row(df_table,'Mittlere Übertretungsquote (Stationen)', vals['exceedance_quote_stations'],f_pct)
@@ -164,12 +163,12 @@ def station_stats(conn, texts):
             filter_expr = f" alle {len(df_unfiltered)} Messstationen (Richtungen)"
         else:
             filter_expr = f" {len(df_filtered)} selektierte Messstationen (Richtungen)"
-        max_exc_quote = df_filtered['uebertretungsquote'].max()
-        max_exc_quote_location = df_filtered.query("uebertretungsquote == @max_exc_quote")
-        max_exc_quote_location = f"{max_exc_quote_location.iloc[0]['address']}, {max_exc_quote_location.iloc[0]['ort']}"
-        max_num = df_filtered['fahrzeuge'].max()
-        max_num_location = df_filtered.query("fahrzeuge == @max_num")
-        max_num_location = f"{max_num_location.iloc[0]['address']}, {max_num_location.iloc[0]['ort']}"
+        max_exc_quote = df_filtered['exceedance_rate'].max()
+        max_exc_quote_location = df_filtered.query("exceedance_rate == @max_exc_quote")
+        max_exc_quote_location = f"{max_exc_quote_location.iloc[0]['location']}, {max_exc_quote_location.iloc[0]['location']}"
+        max_num = df_filtered['vehicles'].max()
+        max_num_location = df_filtered.query("vehicles == @max_num")
+        max_num_location = f"{max_num_location.iloc[0]['location']}, {max_num_location.iloc[0]['location']}"
         max_num = f"{max_num:,d}"
         text = texts['station_analysis'].format(
             filter_expr,
@@ -189,12 +188,12 @@ def station_stats(conn, texts):
 def weekday_stats(conn, texts):
     def get_heatmap(df):
         settings={}
-        settings['x'] = alt.X('dow:N', axis=alt.Axis(title=''))
-        settings['y'] = alt.Y('address:N')
+        settings['x'] = alt.X('dow:N', axis=alt.Axis(title=''), sort=cn.WOCHE)
+        settings['y'] = alt.Y('location:N', axis=alt.Axis(title=''))
         settings['color'] = alt.X('count:Q')
-        settings['tooltip'] = alt.Tooltip(['count:Q'])
+        settings['tooltip'] = alt.Tooltip(['count:Q'], title='Anzahl Überschreitungen')
         settings['width'] = 800
-        settings['height'] = 100 + len(df['address'].unique()) * 20
+        settings['height'] = 100 + len(df['location'].unique()) * 20
         return create_heatmap(df, settings)
 
     def get_filter():
@@ -238,6 +237,24 @@ def weekday_stats(conn, texts):
         df = df[['station_id','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']]
         return df
 
+    def get_text(df, stations, station_sel):
+        if len(station_sel)>0:
+            station_sel =  [str (x) for x in station_sel]
+            where_clause = " where station_id in (" + ",".join(station_sel) + ')'
+            station_num = len(station_sel)
+        else:
+            where_clause = ''
+            station_num = len(stations)
+        sql = qry['exceedance_count_ranked_by_weekday'].format(where_clause)
+        df_rank, ok, err_msg = db.execute_query(sql, conn)
+        df_rank['dow'] = df_rank['dow'].astype(int)
+        df_rank = df_rank.sort_values('first')
+        most_frequent = (cn.WEEKDAY4ID[df_rank.iloc[6]['dow']],cn.WEEKDAY4ID[df_rank.iloc[5]['dow']])
+        df_rank = df_rank.sort_values('last')
+        least_frequent = (cn.WEEKDAY4ID[df_rank.iloc[6]['dow']],cn.WEEKDAY4ID[df_rank.iloc[5]['dow']])
+        text = f"""Bei den selektierten {station_num} Messstationen wurden Geschwindigkeitsübertretungen am häufigsten am {most_frequent[0]} und {most_frequent[1]} verzeichnet. 
+Am wenigsten Übertretungen wurden an den Wochentagen {least_frequent[0]} und {least_frequent[1]} begangen."""
+        return text
 
     stations = get_stations(conn)
     station_sel = get_filter()
@@ -251,10 +268,21 @@ def weekday_stats(conn, texts):
     df_unmelted = df_unmelted.replace({'station_id': get_dic_stations(stations)})
     df_unmelted = df_unmelted.rename(columns={'station_id': 'Messstation'})
     chart = get_heatmap(df_filtered) if cb_heatmap else None
-    return df_unmelted, chart
+    text = get_text(df_unmelted, stations, station_sel)
+    return df_unmelted, chart, text
 
 
 def hourly_stats(conn, texts):
+    def get_heatmap(df):
+        settings={}
+        settings['x'] = alt.X('hour:N', axis=alt.Axis(title=''), sort=cn.WOCHE)
+        settings['y'] = alt.Y('location:N', axis=alt.Axis(title=''))
+        settings['color'] = alt.X('count:Q')
+        settings['tooltip'] = alt.Tooltip(['count:Q'], title='Anzahl Überschreitungen')
+        settings['width'] = 800
+        settings['height'] = 100 + len(df['location'].unique()) * 20
+        return create_heatmap(df, settings)
+
     def get_filter():
         dic_stations = get_dic_stations(stations)
         station_sel = st.sidebar.multiselect("Wähle eine oder mehrere Messstationen", dic_stations.keys(), format_func=lambda x: dic_stations[x])   
@@ -270,13 +298,32 @@ def hourly_stats(conn, texts):
                                    '12','13','14','15','16','17','18','19','20','21','22','23']
         return df
 
-    def get_description(df):
-        text = "Hier fehlt noch eine Beschreibung dieser Tabelle"
+    def get_text(df, stations, station_sel):
+        def get_last_items(df):
+             last_two = (str(int(df_rank.iloc[len(df) - 1]['hour'])),str(int(df_rank.iloc[len(df) - 2]['hour'])))
+             return last_two
+
+        if len(station_sel)>0:
+            station_sel =  [str (x) for x in station_sel]
+            where_clause = " where station_id in (" + ",".join(station_sel) + ')'
+            station_num = len(station_sel)
+        else:
+            where_clause = ''
+            station_num = len(stations)
+        sql = qry['exceedance_count_ranked_by_hour'].format(where_clause)
+        df_rank, ok, err_msg = db.execute_query(sql, conn)
+        df_rank = df_rank.sort_values('first')
+        most_frequent = get_last_items(df_rank)
+        df_rank = df_rank.sort_values('last')
+        least_frequent =  get_last_items(df_rank)
+        text = f"""Bei den selektierten {station_num} Messstationen wurden Geschwindigkeitsübertretungen am häufigsten um {most_frequent[0]} und {most_frequent[1]} Uhr verzeichnet. 
+Am wenigsten Übertretungen wurden um {least_frequent[0]} und {least_frequent[1]} Uhr begangen."""
         return text
 
 
     stations = get_stations(conn)
     station_sel = get_filter()
+    cb_heatmap = st.sidebar.checkbox('Zeige Tabelle auch als Heatmap')
     df_data = get_exceedance_data()
     df_filtered = df_data.query("station_id in @station_sel") if len(station_sel) > 0 else df_data
     df_unmelted = helper.add_leading_zeros(df_filtered, 'hour',2)
@@ -284,17 +331,19 @@ def hourly_stats(conn, texts):
     df_unmelted = dissolve_multi_index(df_unmelted)
     df_unmelted = df_unmelted.replace({'station_id': get_dic_stations(stations)})
     df_unmelted = df_unmelted.rename(columns={'station_id': 'Messstation'})
-    text = get_description(df_unmelted)
-    return df_unmelted, text
+    heatmap = get_heatmap(df_filtered) if cb_heatmap else None
+    text = get_text(df_unmelted, stations, station_sel)
+    return df_unmelted, heatmap, text
     
 
 def show_menu(texts, conn):    
 
-    menu = ['Allgemeine Kennzahlen', 'Statistik nach Messstation', 'Statistik nach Wochentag', 'Statistik nach Tageszeit']
+    menu = texts['menu_options']
 
     menu_item = st.sidebar.selectbox('Optionen', menu)
     st.markdown(f"### {menu_item}")
     text = "Hier fehlt noch eine Beschreibung dieser Tabelle"  # todo: implement
+    heatmap = None
     if menu_item == menu[0]:
         df, text = summary_all(conn, texts)
         helper.show_table(df,[])
@@ -302,14 +351,14 @@ def show_menu(texts, conn):
         df, text = station_stats(conn, texts)
         helper.show_table(df,[])
     elif menu_item ==  menu[2]:
-        df, heatmap = weekday_stats(conn, texts)
+        df, heatmap, text = weekday_stats(conn, texts)
         helper.show_table(df,[])
-        if heatmap:
-            st.altair_chart(heatmap)
-        
     elif menu_item ==  menu[3]:
-        df, text = hourly_stats(conn, texts)
+        df, heatmap, text = hourly_stats(conn, texts)
         helper.show_table(df,[])
+
     st.markdown(text,unsafe_allow_html=True)
+    if heatmap:
+        st.altair_chart(heatmap)
     
                 

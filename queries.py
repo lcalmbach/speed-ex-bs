@@ -32,7 +32,7 @@ qry = {
     "all_locations": """
         select
             site_id
-            ,concat(street, ' ', house_number, ', ', ort) as address
+            ,concat(street, ' ', house_number, ', ', location) as location
             ,start_date
             ,end_date
             ,zone
@@ -136,7 +136,7 @@ qry = {
         SELECT 
             station_id 
             ,EXTRACT(DOW FROM date_time) as dow
-            ,t2.address
+            ,concat(t2.street, ' ', t2.house_number, ', ', t2.location,' > ',t2.direction_street) as location
             ,count(*) as count
             ,avg(velocity_kmph) as avg_velocity
             ,avg(exceedance_kmph) as  avg_exceedance
@@ -145,7 +145,7 @@ qry = {
             inner join station t2 on t2.id = t1.station_id
         group by 
             station_id 
-            ,t2.address
+            ,concat(t2.street, ' ', t2.house_number, ', ', t2.location,' > ',t2.direction_street)
             ,EXTRACT(DOW FROM date_time)
         """,
     
@@ -153,8 +153,8 @@ qry = {
         SELECT 
             station_id 
             ,EXTRACT(HOUR FROM date_time) as hour
-            ,EXTRACT(DOW FROM date_time) as dow
-            ,t2.address
+            --,EXTRACT(DOW FROM date_time) as dow
+            ,concat(t2.street, ' ', t2.house_number, ', ', t2.location,' > ',t2.direction_street) as location
             ,count(*) as count
             ,avg(velocity_kmph) as avg_velocity
             ,avg(exceedance_kmph) as  avg_exceedance
@@ -163,10 +163,25 @@ qry = {
             inner join station t2 on t2.id = t1.station_id
         group by 
             station_id 
-            ,t2.address
+            ,concat(t2.street, ' ', t2.house_number, ', ', t2.location,' > ',t2.direction_street)
             ,EXTRACT(HOUR FROM date_time)
-            , EXTRACT(DOW FROM date_time)
-        """
+            --, EXTRACT(DOW FROM date_time)
+        """,
+    
+    "exceedance_count_ranked_by_weekday": """select 
+	    dow,
+        sum(case when rank_number = 1 then 1 else 0 end) as first,
+        sum(case when rank_number = 7 then 1 else 0 end) as last
+        from public.v_rank_weekdays
+        {}
+        group by dow""",
+    "exceedance_count_ranked_by_hour": """select 
+	    hour,
+        sum(case when rank_number = 1 then 1 else 0 end) as first,
+        sum(case when rank_number = 23 then 1 else 0 end) as last
+        from public.v_rank_hour
+        {}
+        group by hour"""
 }
 
 
