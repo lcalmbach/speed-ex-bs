@@ -7,7 +7,6 @@ def set_column_types(df:pd.DataFrame)->pd.DataFrame:
         df['latitude']=df['latitude'].astype('float')
         df['longitude']=df['longitude'].astype('float')
     if 'start_date' in df.columns:
-        print('yes')
         df['start_date'] = pd.to_datetime(df['start_date'])
         df['end_date'] = pd.to_datetime(df['end_date'])
     if 'direction_street' in df.columns:
@@ -17,8 +16,7 @@ def set_column_types(df:pd.DataFrame)->pd.DataFrame:
 def format_time_columns(df:pd.DataFrame, cols: tuple, fmt): 
     print (cols)
     for col in cols:
-        df[col].apply(lambda x: x.strftime(fmt))
-        print(fmt)
+        df[col] = df[col].apply(lambda x: x.strftime(fmt))
     return df
 
 def add_calculated_fields(df):
@@ -31,7 +29,7 @@ def add_calculated_fields(df):
     df['diff_v85_perc'] = df['diff_v85'] / df['zone'] * 100
     return df
 
-def show_table(data, formatted_columns):
+def show_table(data:pd.DataFrame, formatted_columns:list):
         """
         displays the selected columns in a table
         """
@@ -69,3 +67,11 @@ def add_leading_zeros(df, col,len):
     df[col] = df[col].astype(str)
     df[col]  = df[col].astype(str).str.zfill(len)
     return df
+
+def get_code_list(df:pd.DataFrame, fld:str, sort:bool, all_expr:bool):
+    result = list(df[fld].unique())
+    if sort:
+        result.sort()
+    if all_expr:
+        result = [cn.ALL_EXPRESSION] + result
+    return result

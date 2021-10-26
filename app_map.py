@@ -127,13 +127,12 @@ def show_summary(conn, texts):
     df, ok = prepare_data(conn)
     min_year = int(df['jahr'].min())
     max_year = int(df['jahr'].max())
-    all_expression = '<alle>'
-    lst_years = [all_expression] + list(range(min_year, max_year + 1))
-    lst_zones = [all_expression] + list(df['zone'].unique())
+    lst_years = [cn.ALL_EXPRESSION] + list(range(min_year, max_year + 1))
+    lst_zones = helper.get_code_list(df,'zone',True,True)
     zone = st.sidebar.selectbox("Wähle eine Zone", lst_zones)
     year = st.sidebar.selectbox("Wähle ein Jahr", lst_years)
-    df_filtered = df.query('jahr == @year') if year != all_expression else df
-    df_filtered = df_filtered.query('zone == @zone') if zone != all_expression else df_filtered
+    df_filtered = df.query('jahr == @year') if year != cn.ALL_EXPRESSION else df
+    df_filtered = df_filtered.query('zone == @zone') if zone != cn.ALL_EXPRESSION else df_filtered
     df_filtered = df_filtered[['longitude','latitude','site_id', 'location','zone','start_date','end_date']]
     
     df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
@@ -323,7 +322,6 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
 def show_ranking(conn):
     def explain(df_filtered,settingsm, ranks):
         if len(df_filtered) > 0:
-            dic = df_filtered.iloc[0].to_dict()
             par = cn.PARAMETERS_DIC[settings['rank_param']]['label']
             val_from = df_filtered.iloc[0][settings['rank_param']]
             val_to = df_filtered.iloc[-1][settings['rank_param']]
@@ -402,7 +400,6 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
     df_station = helper.format_time_columns(df_station, ('start_date', 'end_date'), cn.FORMAT_DMY)
     df_station['rang'] = df_station[settings['rank_param']].rank(method='min').astype('int')
     df_station = df_station.sort_values('rang')
-    print(df_station.dtypes)
     settings['midpoint'] = (np.average(df_station['latitude']), np.average(df_station['longitude']))
     max_rank = int(df_station['rang'].max())
     ranks = st.sidebar.slider('Rang', 1,max_rank,(1,10))
@@ -447,21 +444,21 @@ def show_station_analysis(conn):
             settings['x'] = alt.X("date_time:T", axis=alt.Axis(title='', format = ("%d.%m %y")))
             settings['y'] = alt.Y("count:Q", axis=alt.Axis(title='Übertretungen/h'))
             #station_id = dic_station['id']
-            st.write(f"Richtung {dic_station['direction']}")
+            st.write(f"Richtung {dic_station['direction']}: {dic_station['direction_street']}")
             st.write('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen (pro Stunde)')
             chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
-            
+
             st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Tageszeit')
             settings['x'] = alt.X("hour:O", axis=alt.Axis(title=cn.PARAMETERS_DIC['hour']['label']))
-            settings['y'] = alt.Y("count:Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
+            settings['y'] = alt.Y("sum(count):Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
             chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
 
             df_velocities = helper.replace_day_ids(df_velocities, 'dow')
             st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Wochentag')
             settings['x'] = alt.X("dow:O", axis=alt.Axis(title=''), sort=cn.WOCHE)
-            settings['y'] = alt.Y("count:Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
+            settings['y'] = alt.Y("sum(count):Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
             chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
         else:

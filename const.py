@@ -8,7 +8,7 @@ PARAMETERS_DIC = {
     'v50': {'label': 'V50', 'unit': 'km/h', 'type': 'float'},
     'v85': {'label': 'V85', 'unit': 'km/h', 'type': 'float'},
     'vehicles': {'label': 'Fahrzeuge', 'unit': '', 'type': 'int'},
-    'messung_id': {'label': 'Messung_ID', 'unit': '', 'type': 'int'},    
+    'site_id': {'label': 'Messung_ID', 'unit': '', 'type': 'int'},    
     'address': {'label': 'Adresse', 'unit': '', 'type': 'str'},  
     'location': {'label': 'Ort', 'unit': '', 'type': 'str'},  
     'zone': {'label': 'Zone', 'unit': '', 'type': 'str'},  
@@ -26,6 +26,7 @@ PARAMETERS_DIC = {
     'diff_v85': {'label': 'Diff-V85', 'unit': '', 'type': 'float'},  
     'diff_v50_perc': {'label': 'Diff-V50%', 'unit': '%', 'type': 'float'},  
     'diff_v85_perc': {'label': 'Diff-V50%', 'unit': '%', 'type': 'float'},  
+    'station_id': {'label': 'Station-ID', 'unit': '', 'type': 'int'},  
 }
 # files
 TEXTS = './texts.json'
@@ -59,3 +60,4 @@ else:
 FORMAT_DMY = '%d.%m.%Y'
 WOCHE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
 WEEKDAY4ID = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag']
+ALL_EXPRESSION = '<alle>'

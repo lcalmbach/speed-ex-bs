@@ -11,7 +11,7 @@
     "app_stats":{
         "menu_options": ["Allgemeine Kennzahlen", "Statistik nach Messstation", "Statistik nach Wochentag", "Statistik nach Tageszeit"],
         "instructions_summary":"Diese Tabelle zeigt die Kennzahlen aller Messstationen und über den gesamten Zeitraum, in dem Daten zur Verfügung stehen. Die maximale Übertretungsquote von {}% wurde gemessen bei Messtation {} ({} - {}). Die *Mittlere Übertretungsquote (Stationen)* wird berechnet als Mittelwert der Mittelwerte aller Stationen. Es wird jede Station gleich gewichtet unabhängig von der Zahl der zirkulierenden Fahrzeugen. Die *Übertertungsquote (Alle Messungen)* wird berechnet als Anzahl aller Überschreitungen dividiert durch alle Fahrzeuge.",
-        "station_analysis":"Diese Tabelle enthält {}. *{}* ist die Messstation wo die höchste Übertretungsquote ({}) gemessen wurde. Bei Messstation *{}* zirkulierten die meisten Fahrzeuge ({})"
+        "station_analysis":"Diese Tabelle enthält {}. *{}* ist die Messstation wo die höchste Übertretungsquote ({}%) gemessen wurde. Bei Messstation *{}* zirkulierten die meisten Fahrzeuge ({})"
     },
     "app_boxplot":{
 

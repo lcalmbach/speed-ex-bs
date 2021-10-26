@@ -258,7 +258,7 @@ Am wenigsten Übertretungen wurden an den Wochentagen {least_frequent[0]} und {l
 
     stations = get_stations(conn)
     station_sel = get_filter()
-    cb_heatmap = st.sidebar.checkbox('Zeige Tabelle auch als Heatmap')
+    cb_heatmap = st.sidebar.checkbox('Zeige Tabelle als Heatmap')
     df_data = get_exceedance_data()
     df_filtered = df_data.query("station_id in @station_sel") if len(station_sel) > 0 else df_data
     df_filtered = helper.replace_day_ids(df_filtered, 'dow')
@@ -277,7 +277,7 @@ def hourly_stats(conn, texts):
         settings={}
         settings['x'] = alt.X('hour:N', axis=alt.Axis(title=''), sort=cn.WOCHE)
         settings['y'] = alt.Y('location:N', axis=alt.Axis(title=''))
-        settings['color'] = alt.X('count:Q')
+        settings['color'] = alt.X('sum(count):Q')
         settings['tooltip'] = alt.Tooltip(['count:Q'], title='Anzahl Überschreitungen')
         settings['width'] = 800
         settings['height'] = 100 + len(df['location'].unique()) * 20
@@ -294,8 +294,8 @@ def hourly_stats(conn, texts):
         return df
 
     def dissolve_multi_index(df):
-        df.columns = ['station_id','00','01','02','03','04','05','06','07','08','09','10','11',
-                                   '12','13','14','15','16','17','18','19','20','21','22','23']
+        df.columns = ['station_id','00h','01h','02h','03h','04h','05h','06h','07h','08h','09h','10h','11h',
+                                   '12h','13h','14h','15h','16h','17h','18h','19h','20h','21h','22h','23h']
         return df
 
     def get_text(df, stations, station_sel):
@@ -323,7 +323,7 @@ Am wenigsten Übertretungen wurden um {least_frequent[0]} und {least_frequent[1]
 
     stations = get_stations(conn)
     station_sel = get_filter()
-    cb_heatmap = st.sidebar.checkbox('Zeige Tabelle auch als Heatmap')
+    cb_heatmap = st.sidebar.checkbox('Zeige Tabelle als Heatmap')
     df_data = get_exceedance_data()
     df_filtered = df_data.query("station_id in @station_sel") if len(station_sel) > 0 else df_data
     df_unmelted = helper.add_leading_zeros(df_filtered, 'hour',2)
@@ -349,6 +349,7 @@ def show_menu(texts, conn):
         helper.show_table(df,[])
     elif menu_item ==  menu[1]:
         df, text = station_stats(conn, texts)
+        df.columns = [cn.PARAMETERS_DIC[x]['label'] for x in df.columns]
         helper.show_table(df,[])
     elif menu_item ==  menu[2]:
         df, heatmap, text = weekday_stats(conn, texts)

@@ -178,7 +178,7 @@ qry = {
     "exceedance_count_ranked_by_hour": """select 
 	    hour,
         sum(case when rank_number = 1 then 1 else 0 end) as first,
-        sum(case when rank_number = 23 then 1 else 0 end) as last
+        sum(case when rank_number = 24 then 1 else 0 end) as last
         from public.v_rank_hour
         {}
         group by hour"""
