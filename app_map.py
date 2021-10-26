@@ -466,7 +466,7 @@ def show_station_analysis(conn):
 
     def get_station_title(df_station):
         x = df_station.iloc[0].to_dict()
-        return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date'].strftime(cn.FORMAT_DMY)} bis {x['end_date'].strftime(cn.FORMAT_DMY)}"
+        return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date']} bis {x['end_date']}"
     
     title_placeholder = st.empty()
     settings = init_settings()
