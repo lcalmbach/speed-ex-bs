@@ -97,7 +97,7 @@ def show_summary(conn, texts):
     def prepare_data(_conn):    
         df_stations, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
         df_stations['start_date'] = pd.to_datetime(df_stations['start_date'])
-        df_stations['end_date'] = pd.to_datetime(df_stations['start_date'])
+        df_stations['end_date'] = pd.to_datetime(df_stations['end_date'])
         return df_stations, ok
     
     def get_tooltip_html()->str:
@@ -121,8 +121,6 @@ def show_summary(conn, texts):
         else:
             return f"die Messstandorte für Geschwindigkeitsmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
 
-        
-
     st.markdown("### Übersicht über die Messsationen")
     df, ok = prepare_data(conn)
     min_year = int(df['jahr'].min())
@@ -135,8 +133,8 @@ def show_summary(conn, texts):
     df_filtered = df_filtered.query('zone == @zone') if zone != cn.ALL_EXPRESSION else df_filtered
     df_filtered = df_filtered[['longitude','latitude','site_id', 'location','zone','start_date','end_date']]
     
-    df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
-    df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime ('%d.%m.%Y'))
+    df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime(cn.FORMAT_DMY))
+    df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime(cn.FORMAT_DMY))
     midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
     settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
     chart = plot_map(df_filtered, settings)
@@ -148,7 +146,7 @@ def plot_barchart(df,settings):
     chart = alt.Chart(df).mark_bar().encode(
         x=settings['x'],
         y=settings['y'],
-        tooltip=['hour','sum(count)']
+        tooltip=settings['tooltip']
     ).properties(
         width=settings['width'],
         height=settings['height'],
@@ -160,7 +158,7 @@ def plot_linechart(df,settings):
     chart = alt.Chart(df).mark_line().encode(
         x=settings['x'],
         y=settings['y'],
-        tooltip=['hour','count']
+        tooltip=settings['tooltip']
     ).properties(
         width=settings['width'],
         height=settings['height']
@@ -346,7 +344,7 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
             """   
             
             df = helper.set_column_types(df)
-            df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
+            df = helper.format_time_columns(df, ('start_date', 'end_date'), cn.FORMAT_DBY)
             # df = df.rename(columns = {'max': 'max_velocity'})
             df['diff_v50'] = ( df['v50'] - df['zone']) 
             df['diff_v85'] = ( df['v85'] - df['zone']) 
@@ -418,7 +416,7 @@ def show_station_analysis(conn):
         df, ok, err_msg = db.execute_query(sql, _conn)
         df = helper.add_calculated_fields(df)
         df = helper.set_column_types(df)
-        df = helper.format_time_columns(df, ('start_date', 'end_date'), '%d.%b %Y')
+        df = helper.format_time_columns(df, ('start_date', 'end_date'), cn.FORMAT_DBY)
         return df, ok     
 
     def get_velocity_data(site_id, _conn):
@@ -439,34 +437,49 @@ def show_station_analysis(conn):
         
         return settings
 
-    def show_plots(df_velocities, dic_station):
+    def show_plots(df_velocities, df_histo, dic_station):
         if len(df_velocities) > 0:
             settings['x'] = alt.X("date_time:T", axis=alt.Axis(title='', format = ("%d.%m %y")))
             settings['y'] = alt.Y("count:Q", axis=alt.Axis(title='Übertretungen/h'))
-            #station_id = dic_station['id']
-            st.write(f"Richtung {dic_station['direction']}: {dic_station['direction_street']}")
-            st.write('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen (pro Stunde)')
+            settings['tooltip'] = ['date_time','date_time']
+
+            st.markdown(f"""Richtung {dic_station['direction']}: {dic_station['direction_street']}, 
+                Anzahl Fahrzeuge: {dic_station['vehicles']}, davon Übertretungen: {len(df_histo)}""")
+            st.markdown('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen (pro Stunde)')
             chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
 
-            st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Tageszeit')
+            st.markdown('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Tageszeit')
             settings['x'] = alt.X("hour:O", axis=alt.Axis(title=cn.PARAMETERS_DIC['hour']['label']))
             settings['y'] = alt.Y("sum(count):Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
+            settings['tooltip'] = ['hour','sum(count)']
             chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
 
             df_velocities = helper.replace_day_ids(df_velocities, 'dow')
-            st.write('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Wochentag')
+            st.markdown('Anzahl Geschwindigkeitsüberschreitungen aggregiert nach Wochentag')
             settings['x'] = alt.X("dow:O", axis=alt.Axis(title=''), sort=cn.WOCHE)
             settings['y'] = alt.Y("sum(count):Q", axis=alt.Axis(title=cn.PARAMETERS_DIC['count_exc']['label']))
+            settings['tooltip'] = ['dow','sum(count)']
             chart = plot_barchart(df_velocities,settings)
             st.altair_chart(chart)
+
+            st.markdown('Histogramm der Geschwindigkeitsübertretungen (Geschwindigkeit - Zone)')
+            settings['x'] = alt.X("exceedance_kmph:Q", bin=True, axis=alt.Axis(title='Übertretungsgeschwindigkeit'))
+            settings['y'] = alt.Y("count()", axis=alt.Axis(title='Anzahl Übertretungen'))
+            settings['tooltip'] = ['count()']
+            chart = plot_barchart(df_histo, settings)
+            st.altair_chart(chart)
+
+
+            alt.X("IMDB_Rating:Q", bin=True),
+        
         else:
-            st.write(f"keine Daten für Richtung {dic_station['direction']}")
+            st.markdown(f"keine Daten für Richtung {dic_station['direction']}")
 
     def get_station_title(df_station):
         x = df_station.iloc[0].to_dict()
-        return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date']} bis {x['end_date']}"
+        return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date']} bis {x['end_date']}, Total Anzahl Fahrzeuge: {x['vehicles']}"
     
     title_placeholder = st.empty()
     settings = init_settings()
@@ -477,6 +490,9 @@ def show_station_analysis(conn):
     settings['midpoint'] = (np.average(df_stations['latitude']), np.average(df_stations['longitude']))
     df_station = df_stations.query('site_id == @site_id')
     df_velocities, ok = get_velocity_data(site_id, conn)
+    
+    sql = qry['station_velocities_histo'].format(site_id)
+    df_velocities_histo, ok, err_msg = db.execute_query(sql, conn)
 
     title_placeholder.markdown(get_station_title(df_station))
     if len(df_station) > 0:
@@ -488,13 +504,15 @@ def show_station_analysis(conn):
             if len(dic_station) > 0:
                 dic_station = dic_station.iloc[0].to_dict()
                 df_filtered = df_velocities.query(f"station_id == {dic_station['station_id']}")
-                show_plots(df_filtered, dic_station)
+                df_filtered_histo = df_velocities_histo.query(f"direction_id == 1")
+                show_plots(df_filtered, df_filtered_histo, dic_station)
         with col2:
             dic_station = df_station.query('(site_id == @site_id) & (direction == 2)')
             if len(dic_station)>0:
                 dic_station = dic_station.iloc[0].to_dict()
                 df_filtered = df_velocities.query(f"station_id == {dic_station['station_id']}")
-                show_plots(df_velocities, dic_station)
+                df_filtered_histo = df_velocities_histo.query(f"direction_id == 2")
+                show_plots(df_filtered, df_filtered_histo, dic_station)
 
 def show_menu(texts, conn):    
     menu_item = st.sidebar.selectbox('Optionen', texts['menu_options'])

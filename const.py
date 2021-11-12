@@ -58,6 +58,7 @@ else:
     DB_PORT = "5432"
 
 FORMAT_DMY = '%d.%m.%Y'
+FORMAT_DBY = '%d. %b %Y'
 WOCHE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
 WEEKDAY4ID = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag']
 ALL_EXPRESSION = '<alle>'

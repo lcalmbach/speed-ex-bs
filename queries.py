@@ -100,6 +100,8 @@ qry = {
         , TO_CHAR(date_time, 'HH24')::INT
         , EXTRACT(dow  FROM date_time)""",
 
+    "station_velocities_histo": "select exceedance_kmph, direction_id from velocity where site_id = {}",
+
     "station_velocities_by_hour":"""select 
         site_id
         , station_id

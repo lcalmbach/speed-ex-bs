@@ -16,7 +16,7 @@ __version__ = '0.0.16'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
 VERSION_DATE = '2021-10-26'
-my_name = 'Geschwindigkeits-Übertretungen in Basel-Stadt'
+my_name = 'Geschwindigkeits-Übertretungen im Kanton Basel-Stadt'
 
 LOTTIE_URL = 'https://assets6.lottiefiles.com/packages/lf20_useqtj8t.json'
 SOURCE_URL = 'https://data.bs.ch/explore/dataset/100097'
@@ -24,7 +24,7 @@ GIT_REPO = 'https://github.com/lcalmbach/speed-ex-bs'
 APP_INFO = f"""<div style="background-color:powderblue; padding: 10px;border-radius: 15px;">
     <small>App created by <a href="mailto:{__author_email__}">{__author__}</a><br>
     version: {__version__} ({VERSION_DATE})<br>
-    source: <a href="{SOURCE_URL}">data.bs</a>
+    datasource: <a href="{SOURCE_URL}">data.bs</a>
     <br><a href="{GIT_REPO}">git-repo</a>
     """
 
