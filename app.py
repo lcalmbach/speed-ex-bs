@@ -3,7 +3,6 @@ from streamlit_lottie import st_lottie
 import app_info
 import app_map
 import app_stats
-import app_heatmap
 import requests
 import const as cn
 import json
@@ -12,7 +11,7 @@ import json
 from queries import qry
 import database as db
 
-__version__ = '0.0.17'
+__version__ = '0.0.18'
 __author__ = 'Lukas Calmbach'
 __author_email__ = 'lcalmbach@gmail.com'
 VERSION_DATE = '2021-11-12'
@@ -59,7 +58,7 @@ def main():
 
     texts = get_texts()
     conn = db.get_pg_connection()
-    menu = ['Info','Karte','Statistik']
+    menu = cn.MENU
     menu_action = st.sidebar.selectbox('Menu',menu)
     
     if menu_action == menu[0]:
@@ -68,6 +67,7 @@ def main():
         app_map.show_menu(texts['app_map'], conn)
     elif menu_action == menu[2]:
         app_stats.show_menu(texts['app_stats'], conn)
+        
     st.sidebar.markdown(APP_INFO, unsafe_allow_html=True)
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import os
 import socket
 
+MENU = ['Info','Karte','Statistik']
 # parameters
 
 PARAMETERS_DIC = {
