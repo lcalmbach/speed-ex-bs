@@ -1,14 +1,10 @@
 # from sqlite3.dbapi2 import Timestamp
 # from numpy.random.mtrand import random_integers
-from altair.vegalite.v4.schema.channels import Size
 import streamlit as st
 import altair as alt
 import pandas as pd
 import pydeck as pdk
 import numpy as np
-import streamlit as st
-from streamlit_folium import folium_static
-import folium
 # import random
 from datetime import datetime, time
 from queries import qry
@@ -18,6 +14,75 @@ import database as db
 import helper
 
 lst_group_fields = ['exceedance_rate', 'diff_v50_perc', 'diff_v85_perc', 'vehicles']
+
+
+def plot_map(df: pd.DataFrame, settings: object):
+    """
+    Generates a map plot
+
+    :param value_col: column holding parameter to be plotted
+    :param layer_type: HexagonLayer or ScatterplotLayer
+    :param title: title of plot
+    :param df: dataframe with data to be plotted
+    :return:
+    """
+    if df.shape[0] > 0:
+        if settings['layer_type'] == 'ColumnLayer':
+            layer = pdk.Layer(
+                type=settings['layer_type'],
+                data=df,
+                get_position="[longitude, latitude]",
+                auto_highlight=True,
+                elevation_scale=settings['elevation_scale'],
+                pickable=True,
+                elevation_range=settings['elevation_range'],
+                coverage=1,
+                radius = settings['radius'],
+                get_fill_color=settings['color'],
+            )
+        elif settings['layer_type'] == 'ScatterplotLayer':
+            layer = pdk.Layer(
+                type='ScatterplotLayer',
+                data=df,
+                pickable=True,
+                get_position="[longitude, latitude]",
+                radius_scale=10,
+                radius_min_pixels=settings['min_rad'],
+                radius_max_pixels=settings['max_rad'],
+                line_width_min_pixels=1,
+                get_radius=settings['get_radius'],
+                get_fill_color=settings['get_fill_color'],  # [color_r, color_g, color_b]",
+                get_line_color=[0, 0, 0],
+            )
+        elif settings['layer_type'] == 'IconLayer':
+            df['icon_data'] = None
+            for i in df.index:
+                df['icon_data'][i] = cn.ICON_DATA
+            layer = pdk.Layer(
+                type="IconLayer",
+                data=df,
+                get_icon="icon_data",
+                get_size=2,
+                size_scale=15,
+                get_position=["longitude", "latitude"],
+                pickable=True,
+            )
+        view_state = pdk.ViewState(
+            longitude=settings['midpoint'][1], latitude=settings['midpoint'][0], zoom=12, min_zoom=5, max_zoom=20, pitch=0, bearing=-27.36
+        )
+        
+        r = pdk.Deck(
+            map_style=cn.MAPBOX_STYLE,
+            layers=[layer],
+            initial_view_state=view_state,
+            tooltip={
+                "html": settings['tooltip_html'],
+                "style": {'fontSize': cn.TOOLTIP_FONTSIZE,
+                    "backgroundColor": cn.TOOLTIP_BACKCOLOR,
+                    "color": cn.TOOLTIP_FORECOLOR}
+            }
+        )
+        return r
 
 
 def show_summary(conn, texts):
@@ -38,11 +103,11 @@ def show_summary(conn, texts):
     def get_tooltip_html()->str:
 
         text = """
-            <b>Messung-id:</b> {}<br/>           
-            <b>Adresse:</b> {}<br/>
-            <b>Messbeginn:</b> {}<br/>
-            <b>Messende:</b> {}<br/>
-            <b>Zone:</b> {}<br/>  
+            <b>Messung-id:</b> {site_id}<br/>           
+            <b>Adresse:</b> {location}<br/>
+            <b>Messbeginn:</b> {start_date}<br/>
+            <b>Messende:</b> {end_date}<br/>
+            <b>Zone:</b> {zone}<br/>  
         """
         return text
 
@@ -56,22 +121,6 @@ def show_summary(conn, texts):
         else:
             return f"die Messstandorte für Geschwindigkeitsmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
 
-    def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
-        for index, row in df.iterrows():
-            tooltip = settings['tooltip_html'].format(
-                    row['site_id']
-                    ,row['location']
-                    ,row['start_date']
-                    ,row['end_date']
-                    ,row['zone']
-                )
-            popup = row['site_id']
-            folium.Marker(
-                [row['latitude'], row['longitude']], popup=popup, tooltip=tooltip,
-            ).add_to(m)
-        return m
-    
     st.markdown("### Übersicht über die Messsationen")
     df, ok = prepare_data(conn)
     min_year = int(df['jahr'].min())
@@ -94,7 +143,7 @@ def show_summary(conn, texts):
     #    'get_radius':'radius',
     #    'get_fill_color':'[0,10,255, 80]'}
     chart = plot_map(df_filtered, settings)
-    folium_static(chart)
+    st.pydeck_chart(chart)
     st.markdown(texts['instructions'].format(get_filter_expression()))    
 
 
@@ -248,31 +297,6 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
         settings['color_field'] = st.sidebar.selectbox("Symbole mit Farbe bestimmt durch Feld:", lst_group_fields)
         return settings
 
-    def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
-    
-        for index, row in df.iterrows():
-            tooltip = settings['tooltip_html'].format(
-                    row['site_id']
-                    ,row['location']
-                    ,row['direction_street']
-                    ,row['start_date']
-                    ,row['end_date']
-                    ,row['exceedance_rate']
-                    ,row['zone']
-                    ,row['v50']
-                    ,row['v85']
-                    ,row['diff_v50']
-                    ,row['diff_v85']
-                    ,row['diff_v50_perc']
-                    ,row['diff_v85_perc']
-                )
-            popup = row['site_id']
-            folium.Marker(
-                [row['latitude'], row['longitude']], popup=popup, tooltip=tooltip,
-            ).add_to(m)
-        return m
-
     settings = init_settings()
     df, ok = prepare_map_data(conn, settings)
     map_placeholder = st.empty()
@@ -294,7 +318,7 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
     # st.write(df_filtered)
     if len(df_filtered) > 0:
         chart = plot_map(df_filtered, settings)
-        folium_static(chart)
+        map_placeholder.pydeck_chart(chart)
         text_placeholder.markdown(get_figure_text(df_filtered,settings,year,week),unsafe_allow_html=True)
 
 
@@ -339,19 +363,19 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
 
     def get_tooltip_html():
         return """
-            <b>Messung-id:</b> {}<br/>
-            <b>Adresse:</b> {}<br/>
-            <b>Richtung:</b> {}<br/>
-            <b>Messbeginn:</b> {}<br/>
-            <b>Messende:</b> {}<br/>
-            <b>Übertretungsquote:</b> {}<br/>
-            <b>Zone:</b> {}<br/>  
-            <b>V50:</b> {}<br/>
-            <b>V85:</b> {}<br/>
-            <b>V50 - Zone:</b> {}<br/>
-            <b>V85 - Zone:</b> {}<br/>
-            <b>V50 - Zone%:</b> {}<br/>
-            <b>V85 - Zone%:</b> {}<br/>
+            <b>Messung-id:</b> {site_id}<br/>
+            <b>Adresse:</b> {address}<br/>
+            <b>Richtung:</b> {direction_street}<br/>
+            <b>Messbeginn:</b> {start_date}<br/>
+            <b>Messende:</b> {end_date}<br/>
+            <b>Übertretungsquote:</b> {exceedance_rate}<br/>
+            <b>Zone:</b> {zone}<br/>  
+            <b>V50:</b> {v50}<br/>
+            <b>V85:</b> {v85}<br/>
+            <b>V50 - Zone:</b> {diff_v50}<br/>
+            <b>V85 - Zone:</b> {diff_v85}<br/>
+            <b>V50 - Zone%:</b> {diff_v50_perc}<br/>
+            <b>V85 - Zone%:</b> {diff_v85_perc}<br/>
         """
 
     def init_settings():
@@ -372,30 +396,6 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
         text = f"#### Messstationen geordnet nach Parameter *{par}*\n Ränge {ranks[0]} bis {ranks[1]}" 
         return text
 
-    def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
-        for index, row in df.iterrows():
-            tooltip = settings['tooltip_html'].format(
-                    row['site_id']
-                    ,row['address']
-                    ,row['direction_street']
-                    ,row['start_date']
-                    ,row['end_date']
-                    ,row['exceedance_rate']
-                    ,row['zone']
-                    ,row['v50']
-                    ,row['v85']
-                    ,row['diff_v50']
-                    ,row['diff_v85']
-                    ,row['diff_v50_perc']
-                    ,row['diff_v85_perc']
-                )
-            popup = row['site_id']
-            folium.Marker(
-                [row['latitude'], row['longitude']], popup=popup, tooltip=tooltip,
-            ).add_to(m)
-        return m
-
     # start
     settings = init_settings()
     df_station, ok = prepare_map_data(conn, settings)
@@ -410,7 +410,7 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
     if len(df_filtered) > 0:
         st.markdown(get_title(df_filtered, settings, ranks),unsafe_allow_html=True)
         chart = plot_map(df_filtered, settings)
-        folium_static(chart)
+        st.pydeck_chart(chart)
         st.markdown(explain(df_filtered,settings,ranks),unsafe_allow_html=True)
 
 
@@ -430,14 +430,7 @@ def show_station_analysis(conn):
         return df, ok           
 
     def get_tooltip_html():
-        text = """
-            <b>Messung-id:</b> {}<br/>           
-            <b>Adresse:</b> {}<br/>
-            <b>Messbeginn:</b> {}<br/>
-            <b>Messende:</b> {}<br/>
-            <b>Zone:</b> {}<br/>  
-        """
-        return text
+        return ""
 
     def init_settings():
         settings = {'layer_type':'IconLayer', 
@@ -493,22 +486,6 @@ def show_station_analysis(conn):
         x = df_station.iloc[0].to_dict()
         return f"### Messtation {x['site_id']} {x['location']} \nvon {x['start_date']} bis {x['end_date']}, Total Anzahl Fahrzeuge: {x['vehicles']}"
     
-    def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=[df.iloc[0]['latitude'], df.iloc[0]['longitude']], zoom_start=17)
-        for index, row in df.iterrows():
-            tooltip = settings['tooltip_html'].format(
-                    row['site_id']
-                    ,row['location']
-                    ,row['start_date']
-                    ,row['end_date']
-                    ,row['zone']
-                )
-            popup = row['site_id']
-            folium.Marker(
-                [row['latitude'], row['longitude']], popup=popup, tooltip=tooltip,
-            ).add_to(m)
-        return m
-
     title_placeholder = st.empty()
     settings = init_settings()
     df_stations, ok = prepare_map_data(conn)
@@ -525,7 +502,7 @@ def show_station_analysis(conn):
     title_placeholder.markdown(get_station_title(df_station))
     if len(df_station) > 0:
         chart = plot_map(df_station, settings)
-        folium_static(chart)
+        st.pydeck_chart(chart)
         col1, col2 = st.columns(2)
         with col1:
             dic_station = df_station.query('(site_id == @site_id) & (direction == 1)')
