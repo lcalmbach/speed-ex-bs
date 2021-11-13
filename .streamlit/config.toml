@@ -3,4 +3,4 @@ enableCORS = false
 enableXsrfProtection = false
 
 [mapbox]
-token = "pk.eyJ1IjoiZ29kb3Q2MyIsImEiOiJja3VsYmlvYjkxa3ZrMzJteWFvcGJ4c2hhIn0.6fSS2nQEjIb8ypihACoMyQ"
+token = "pk.eyJ1IjoiZ29kb3Q2MyIsImEiOiJjazV3NmprcTgwaXpxM2ZsYjZldnAxdnl2In0.CIb5wglOXcvj8Dbuc2n_Hg"

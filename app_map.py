@@ -136,7 +136,12 @@ def show_summary(conn, texts):
     df_filtered['start_date'] = df_filtered['start_date'].apply(lambda x: x.strftime(cn.FORMAT_DMY))
     df_filtered['end_date'] = df_filtered['end_date'].apply(lambda x: x.strftime(cn.FORMAT_DMY))
     midpoint = (np.average(df_filtered['latitude']), np.average(df_filtered['longitude']))
-    settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
+    #settings = {'midpoint': midpoint, 'layer_type': 'IconLayer', 'tooltip_html': get_tooltip_html()}
+    settings = {'midpoint': midpoint, 'layer_type': 'ScatterplotLayer', 'tooltip_html': get_tooltip_html(),
+        'min_rad':4, 
+        'max_rad':30, 
+        'get_radius':'radius',
+        'get_fill_color':'[0,10,255, 80]'}
     chart = plot_map(df_filtered, settings)
     st.pydeck_chart(chart)
     st.markdown(texts['instructions'].format(get_filter_expression()))    

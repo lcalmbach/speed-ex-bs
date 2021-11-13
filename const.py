@@ -35,7 +35,7 @@ QUERIES = './queries.json'
 
 # pydeck chart settings
 MAP_LEGEND_SYMBOL_SIZE: int = 10
-MAPBOX_STYLE: str = "mapbox://styles/mapbox/light-v10"
+MAPBOX_STYLE: str = "mapbox://styles/mapbox/streets-v11"#"mapbox://styles/mapbox/light-v10"
 GRADIENT: str = 'blue-green'
 TOOLTIP_FONTSIZE = 'x-small'
 TOOLTIP_BACKCOLOR = 'white'
