@@ -27,7 +27,6 @@ def show_summary(conn, texts):
     def get_filter_expression():
         pass
 
-
     @st.experimental_memo()   
     def prepare_data(_conn):    
         df_stations, ok, err_msg = db.execute_query(qry['all_stations'], _conn)
@@ -57,7 +56,7 @@ def show_summary(conn, texts):
             return f"die Messstandorte für Geschwindigkeitsmessungen in den Jahren {min_year} bis {max_year} in allen Zonen"
 
     def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
+        m = folium.Map(location=settings['midpoint'], zoom_start=cn.ZOOM_START_DETAIL)
         for index, row in df.iterrows():
             tooltip = settings['tooltip_html'].format(
                     row['site_id']
@@ -249,7 +248,7 @@ Die Definition des Parameters *{settings['rad_field']}* findest du auf der Infos
         return settings
 
     def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
+        m = folium.Map(location=settings['midpoint'], zoom_start=cn.ZOOM_START_DETAIL)
     
         for index, row in df.iterrows():
             tooltip = settings['tooltip_html'].format(
@@ -373,7 +372,7 @@ der Messstation mit dem tiefsten Wert für Parameter *{par}*. Du findest die Def
         return text
 
     def plot_map(df: pd.DataFrame, settings: object):
-        m = folium.Map(location=settings['midpoint'], zoom_start=15)
+        m = folium.Map(location=settings['midpoint'], zoom_start=cn.ZOOM_START_DETAIL)
         for index, row in df.iterrows():
             tooltip = settings['tooltip_html'].format(
                     row['site_id']
@@ -443,9 +442,8 @@ def show_station_analysis(conn):
         settings = {'layer_type':'IconLayer', 
         'tooltip_html':get_tooltip_html(), 
         }
-
-        settings['width'] = 400
-        settings['height'] = 400
+        settings['width'] = cn.LINE_PLOT_WIDTH
+        settings['height'] = cn.LINE_PLOT_HEIGHT
         
         return settings
 
@@ -457,7 +455,7 @@ def show_station_analysis(conn):
 
             st.markdown(f"""Richtung {dic_station['direction']}: {dic_station['direction_street']}, 
                 Anzahl Fahrzeuge: {dic_station['vehicles']}, davon Übertretungen: {len(df_histo)}""")
-            st.markdown('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen (pro Stunde)')
+            st.markdown('Zeitlicher Verlauf, Anzahl Geschwindigkeitsüberschreitungen pro Stunde')
             chart = plot_linechart(df_velocities,settings)
             st.altair_chart(chart)
 

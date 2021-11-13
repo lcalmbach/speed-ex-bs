@@ -63,3 +63,6 @@ FORMAT_DBY = '%d. %b %Y'
 WOCHE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
 WEEKDAY4ID = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag']
 ALL_EXPRESSION = '<alle>'
+LINE_PLOT_WIDTH = 400
+LINE_PLOT_HEIGHT = 300
+ZOOM_START_DETAIL = 15
