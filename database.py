@@ -110,10 +110,12 @@ def save_db_table(table_name: str, df: pd.DataFrame, fields: list, if_exists: st
         if len(fields) > 0:
             df = df[fields]
         df.to_sql(table_name, engine, if_exists=if_exists, chunksize=20000, index=False)
+        print(table_name)
         ok = True
     except ValueError as vx:
         err_msg = vx
     except Exception as ex:
         err_msg = ex
     finally:
+        print(ok, err_msg)
         return ok, err_msg
